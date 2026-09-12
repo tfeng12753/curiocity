@@ -1,17 +1,23 @@
 import { useEffect, useRef } from 'react';
 import { tracker } from './trackerStore';
 import { useTrackerState } from './useTracker';
+import { useProgress } from '../state/progress';
+import { PlayerCharacter } from '../components/player/PlayerCharacter';
 import './tracker.css';
 
 const RING_CIRCUMFERENCE = 2 * Math.PI * 26;
 
 /**
- * The student's pointer, drawn as a friendly fingertip. In hand mode the ring
- * fills while they hold still (dwell = "press"); in pointer mode it is a light
- * halo so the same visual language is used for both inputs.
+ * The student's own customized character follows their tracked fingertip (or
+ * mouse) around, instead of a plain reticle - it's driven by the exact same
+ * cursor stream the reticle used, so "a character that matches your
+ * movement" needed no new tracking, just a different thing drawn at the
+ * point that was already being tracked. In hand mode the ring fills while
+ * they hold still (dwell = "press"), and a poke makes the character hop.
  */
 export function FingerCursor({ active }: { active: boolean }) {
   const { mode, handVisible } = useTrackerState();
+  const { equippedCosmetics } = useProgress();
   const rootRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<SVGCircleElement>(null);
 
@@ -71,7 +77,7 @@ export function FingerCursor({ active }: { active: boolean }) {
       }`}
       aria-hidden="true"
     >
-      <svg viewBox="0 0 64 64" width="64" height="64">
+      <svg viewBox="0 0 64 64" width="64" height="64" style={{ overflow: 'visible' }}>
         <circle className="finger-cursor__halo" cx="32" cy="32" r="18" />
         <circle
           ref={ringRef}
@@ -85,8 +91,10 @@ export function FingerCursor({ active }: { active: boolean }) {
             opacity: 0,
           }}
         />
-        <circle className="finger-cursor__dot" cx="32" cy="32" r="7" />
       </svg>
+      <div className="finger-cursor__character">
+        <PlayerCharacter size={34} equipped={equippedCosmetics} />
+      </div>
     </div>
   );
 }
