@@ -14,6 +14,25 @@ import { sfx } from './sound';
 const ENDPOINT = (import.meta.env.VITE_API_ENDPOINT ?? '/api').replace(/\/$/, '');
 const CACHE_LIMIT = 40;
 
+/**
+ * Falling back to browser speech is meant to be graceful, not invisible. It was
+ * invisible: because Curio still talked, a completely unreachable narration
+ * proxy looked exactly like a working one, and the only way to notice was that
+ * the ElevenLabs dashboard showed no usage at all.
+ *
+ * Logged once per session so the reason is always one console line away.
+ */
+let warnedAboutFallback = false;
+function warnFallback(reason: string) {
+  if (warnedAboutFallback) return;
+  warnedAboutFallback = true;
+  console.warn(
+    `[voice] Falling back to browser speech - ElevenLabs narration is not reachable (${reason}). ` +
+      `Tried ${ENDPOINT}/speak. Check that the proxy in server/ is deployed and that ` +
+      `VITE_API_ENDPOINT pointed at it when this bundle was built.`,
+  );
+}
+
 interface SpeakOptions {
   voiceId?: string;
   onAmplitude?: (level: number) => void;
@@ -80,7 +99,15 @@ function trackAmplitude(analyser: AnalyserNode, onAmplitude: (level: number) => 
   currentRaf = requestAnimationFrame(tick);
 }
 
-/** A warm, clear English voice if the device has one. */
+/**
+ * A bright, friendly female English voice if the device has one.
+ *
+ * This tier matters more than "fallback" suggests - whenever the narration
+ * proxy is unreachable it is the *only* voice anyone hears, so it gets the
+ * same cheerful-female brief as Curio's ElevenLabs voice. The list previously
+ * named only macOS and Chrome voices, which left every Windows machine falling
+ * through to `voices[0]` - often a male default.
+ */
 function pickBrowserVoice(): SpeechSynthesisVoice | null {
   let voices: SpeechSynthesisVoice[] = [];
   try {
@@ -90,12 +117,25 @@ function pickBrowserVoice(): SpeechSynthesisVoice | null {
   }
   if (voices.length === 0) return null;
 
-  const preferred = ['Samantha', 'Google UK English Female', 'Karen', 'Moira', 'Google US English'];
+  const preferred = [
+    'Samantha', // macOS
+    'Google UK English Female',
+    'Google US English',
+    'Microsoft Aria Online (Natural) - English (United States)', // Windows 11
+    'Microsoft Zira - English (United States)', // Windows 10
+    'Karen',
+    'Moira',
+  ];
   for (const name of preferred) {
     const match = voices.find((voice) => voice.name === name);
     if (match) return match;
   }
-  return voices.find((voice) => voice.lang.toLowerCase().startsWith('en')) ?? voices[0];
+
+  // Nothing named matched - prefer any English voice that advertises itself as
+  // female before giving up and taking the system default.
+  const english = voices.filter((voice) => voice.lang.toLowerCase().startsWith('en'));
+  const female = english.find((voice) => /female|aria|zira|samantha|karen|moira|eva|hazel/i.test(voice.name));
+  return female ?? english[0] ?? voices[0];
 }
 
 function speakWithBrowser(text: string, onAmplitude?: (level: number) => void, onEnd?: () => void) {
@@ -108,8 +148,10 @@ function speakWithBrowser(text: string, onAmplitude?: (level: number) => void, o
   const utterance = new SpeechSynthesisUtterance(text);
   const voice = pickBrowserVoice();
   if (voice) utterance.voice = voice;
-  utterance.rate = 0.98;
-  utterance.pitch = 1.15;
+  // A touch quicker and brighter than neutral - reads as upbeat rather than
+  // instructional, without tipping into cartoonish.
+  utterance.rate = 1.02;
+  utterance.pitch = 1.25;
 
   // There is no audio stream to measure here, so the mouth is driven by a
   // burbling oscillation for as long as she is talking - close enough to
@@ -155,9 +197,24 @@ async function fetchSpeechUrl(text: string, voiceId: string | undefined, control
     body: JSON.stringify({ text, voiceId }),
     signal: controller.signal,
   });
-  if (!response.ok) return null;
+  if (!response.ok) {
+    warnFallback(`HTTP ${response.status}`);
+    return null;
+  }
 
   const blob = await response.blob();
+
+  // A 200 is not enough on its own. When the proxy is missing, a static host
+  // answers this path with whatever its rewrite rules say - an empty body, or
+  // index.html - and both used to sail through as "success", get cached as a
+  // broken blob URL, and only fail later at play() where the error was
+  // swallowed. Checking that this is actually audio is what turns a silent
+  // misconfiguration back into a visible one.
+  if (blob.size === 0 || !blob.type.startsWith('audio/')) {
+    warnFallback(`response was not audio (${blob.size} bytes, type "${blob.type || 'none'}")`);
+    return null;
+  }
+
   const url = URL.createObjectURL(blob);
   cacheBlobUrl(key, url);
   return url;
@@ -210,8 +267,11 @@ export const voice = {
 
     try {
       await playUrl(url, onAmplitude, onEnd);
-    } catch {
-      if (!controller.signal.aborted) speakWithBrowser(text, onAmplitude, onEnd);
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        warnFallback(`playback failed (${error instanceof Error ? error.message : String(error)})`);
+        speakWithBrowser(text, onAmplitude, onEnd);
+      }
     }
   },
 

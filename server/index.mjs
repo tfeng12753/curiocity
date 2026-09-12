@@ -8,7 +8,25 @@ import { createServer } from 'node:http';
 
 const PORT = process.env.PORT ?? 8787;
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? '21m00Tcm4TlvDq8ikWAM';
+// Curio is a cheerful, friendly female guide for 9-12 year olds. The previous
+// default was Rachel (21m00Tcm4TlvDq8ikWAM), a calm, measured narrator voice -
+// accurate and clear, but it read as a documentary rather than a playmate.
+// Elli is a brighter, younger, more animated female voice.
+//
+// Voice IDs are specific to what is in your ElevenLabs Voice Library, so treat
+// this as a starting point: pick a voice there, copy its ID, and set
+// ELEVENLABS_VOICE_ID to override without touching code.
+const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? 'MF3mGyEYCl7XYWbV9V6O';
+/** 0-1. Lower is more expressive and variable; higher is flatter and safer. */
+const VOICE_STABILITY = clamp01(process.env.ELEVENLABS_STABILITY, 0.35);
+/** 0-1. Exaggerates the voice's own character. Above ~0.5 gets unstable. */
+const VOICE_STYLE = clamp01(process.env.ELEVENLABS_STYLE, 0.35);
+
+function clamp01(raw, fallback) {
+  const value = Number.parseFloat(raw);
+  return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback;
+}
+
 const IFM_API_KEY = process.env.IFM_API_KEY;
 const IFM_MODEL = process.env.IFM_MODEL ?? 'IFM/K2-Horizon-375B-A23B';
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? '*';
@@ -45,7 +63,20 @@ async function fetchSpeech(text, voiceId) {
     body: JSON.stringify({
       text,
       model_id: 'eleven_turbo_v2_5',
-      voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+      // Tuned for warmth and energy rather than neutral narration. Lower
+      // stability lets the delivery vary line to line (a fixed 0.5 read every
+      // sentence with the same measured cadence, which is what made Curio sound
+      // like a voiceover instead of a friend); style adds expressiveness.
+      //
+      // Both are env-tunable because getting a voice to feel right is
+      // iterative, and changing a Render env var is far quicker than shipping
+      // a code change to try one number.
+      voice_settings: {
+        stability: VOICE_STABILITY,
+        similarity_boost: 0.75,
+        style: VOICE_STYLE,
+        use_speaker_boost: true,
+      },
     }),
   });
 
