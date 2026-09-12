@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { Avatar, type AvatarMood } from './Avatar';
+import { useVoiceover } from '../../hooks/useVoiceover';
 
 interface DialogueBoxProps {
   text: string;
@@ -30,6 +31,7 @@ function useTypewriter(text: string, speed = 16) {
 
 export function DialogueBox({ text, mood = 'idle', instruction, children }: DialogueBoxProps) {
   const typed = useTypewriter(text);
+  const { speaking, amplitude } = useVoiceover(text);
 
   return (
     <motion.div
@@ -39,7 +41,7 @@ export function DialogueBox({ text, mood = 'idle', instruction, children }: Dial
       transition={{ type: 'spring', stiffness: 200, damping: 22 }}
     >
       <div className="dialogue__avatar">
-        <Avatar mood={mood} size={128} />
+        <Avatar mood={mood} size={128} talking={speaking} amplitude={amplitude} />
       </div>
 
       <div className="dialogue__body">

@@ -1,0 +1,52 @@
+.avatar__arm {
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.avatar__mouth-talk {
+  transition: ry 70ms linear;
+}
+
+/* Independent, out-of-phase sway so the head and body don't move as one
+   rigid block - layered under the wrapper's own `bob` keyframe. */
+.avatar__head {
+  animation: avatar-head-tilt 5.5s ease-in-out infinite;
+  transform-origin: 60px 66px;
+}
+
+.avatar__body {
+  animation: avatar-body-breathe 4.2s ease-in-out infinite;
+  transform-origin: 60px 114px;
+}
+
+.avatar--cheer .avatar__head {
+  animation-duration: 1.4s;
+}
+
+@keyframes avatar-head-tilt {
+  0%,
+  100% {
+    transform: rotate(-1.5deg);
+  }
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+
+@keyframes avatar-body-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.015, 0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar__arm,
+  .avatar__head,
+  .avatar__body {
+    animation: none;
+    transition: none;
+  }
+}

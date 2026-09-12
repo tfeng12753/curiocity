@@ -111,6 +111,8 @@ scripts/
   playthrough.mjs           clicks through the entire lesson and asserts it completes
   camera-check.mjs          boots hand tracking against a synthetic camera
   sync-mediapipe-wasm.mjs   copies the wasm runtime into public/ (runs on install)
+server/
+  index.mjs                 optional TTS proxy - see "Voice" below
 ```
 
 All the illustration is hand-written SVG and CSS — no image assets, no icon font.
@@ -123,6 +125,33 @@ With `npm run dev` running:
 node scripts/playthrough.mjs   # full mouse playthrough, screenshots to /tmp/shots/play
 node scripts/camera-check.mjs  # verifies hand tracking initialises end to end
 ```
+
+## Voice (optional)
+
+Poly can read her dialogue lines aloud with ElevenLabs. It's entirely
+optional — with no key configured, `/api/speak` returns a clear error, the
+frontend swallows it, and the lesson runs exactly as before, text-only.
+
+ElevenLabs' API needs a secret key that can't live in client-side code, so
+this is the one deliberate exception to "no server" below: `server/` is a
+small, dependency-free Node proxy whose only job is to hold that key and
+forward text-to-speech requests. Dialogue lines repeat a lot as kids replay
+lessons, so it also caches synthesised audio in memory.
+
+To run it locally:
+
+```bash
+cp server/.env.example server/.env   # fill in ELEVENLABS_API_KEY
+npm run dev:voice                    # starts the proxy on :8787
+npm run dev                          # the Vite dev server proxies /api to it
+```
+
+In production the two halves are separate Render services (see
+`render.yaml`): the static site gets a build-time `VITE_VOICE_ENDPOINT`
+pointing at the proxy's URL, and the proxy gets `ELEVENLABS_API_KEY` (and
+optionally `ELEVENLABS_VOICE_ID`) set as secrets in the Render dashboard —
+they're marked `sync: false` in the blueprint, so nothing sensitive lives in
+the repo.
 
 ## Deploying
 
@@ -147,7 +176,9 @@ than a requirement today — it keeps unknown paths landing on the app instead o
   and the controls visible.
 - One hand, one fingertip. No multi-hand or gesture vocabulary.
 - Progress and badges live in `localStorage` — per browser, not synced.
-- No accounts, no server, no build-time backend, by design for this prototype.
+- No accounts, no build-time backend, by design for this prototype — the one
+  exception is the optional voice proxy in `server/`, which exists solely to
+  keep the ElevenLabs API key out of the browser (see "Voice" above).
 
 The previous single-file prototype is preserved at
 `legacy/curio-city-prototype.html`.
