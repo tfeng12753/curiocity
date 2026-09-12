@@ -20,11 +20,12 @@ services:
       # NOTE: if this service was created by hand in the Render dashboard (not
       # via "New > Blueprint"), Render ignores this file entirely - set these
       # env vars and the header above directly in the dashboard instead.
-      - key: VITE_VOICE_ENDPOINT
+      - key: VITE_API_ENDPOINT
         value: https://curiocity-voice.onrender.com/api
 
-  # Holds ELEVENLABS_API_KEY server-side and proxies text-to-speech requests.
-  # See server/index.mjs - this is the one deliberate exception to "no server".
+  # Holds ELEVENLABS_API_KEY and IFM_API_KEY server-side, proxying narration
+  # and Poly's AI hints. See server/index.mjs - this is the one deliberate
+  # exception to "no server".
   - type: web
     name: curiocity-voice
     runtime: node
@@ -36,6 +37,10 @@ services:
       - key: ELEVENLABS_API_KEY
         sync: false
       - key: ELEVENLABS_VOICE_ID
+        sync: false
+      - key: IFM_API_KEY
+        sync: false
+      - key: IFM_MODEL
         sync: false
       - key: ALLOWED_ORIGIN
         value: https://curiocity-16y4.onrender.com

@@ -19,9 +19,22 @@ export function FingerCursor({ active }: { active: boolean }) {
     if (!active) return;
     let frame = 0;
     let target = { x: window.innerWidth / 2, y: window.innerHeight / 2, visible: false };
+    let pokeTimeout: ReturnType<typeof setTimeout> | undefined;
 
     const unsubscribeCursor = tracker.subscribeCursor((sample) => {
       target = { x: sample.x, y: sample.y, visible: sample.visible };
+      if (sample.poking) {
+        const root = rootRef.current;
+        if (root) {
+          root.classList.remove('is-poking');
+          // Forces the animation to restart even if a previous poke's timeout
+          // hasn't cleared the class yet.
+          void root.offsetWidth;
+          root.classList.add('is-poking');
+        }
+        clearTimeout(pokeTimeout);
+        pokeTimeout = setTimeout(() => rootRef.current?.classList.remove('is-poking'), 260);
+      }
     });
 
     const unsubscribeDwell = tracker.subscribeDwell((progress) => {
@@ -42,6 +55,7 @@ export function FingerCursor({ active }: { active: boolean }) {
 
     return () => {
       cancelAnimationFrame(frame);
+      clearTimeout(pokeTimeout);
       unsubscribeCursor();
       unsubscribeDwell();
     };

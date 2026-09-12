@@ -137,8 +137,13 @@ export function InteractiveSurface({
       const pinchStarted = sample.pinching && !pinchRef.current;
       pinchRef.current = sample.pinching;
 
+      // A forward poke - jabbing the fingertip toward the camera - is the
+      // primary way to commit; sample.poking is already a one-shot rising
+      // edge (see trackerStore's detectPoke), so no extra edge-tracking
+      // needed here. The dwell hold and pinch both stay as fallbacks for
+      // whenever a poke doesn't register cleanly.
       const elapsed = now - dwellStartRef.current;
-      const ready = elapsed >= dwellMs || pinchStarted;
+      const ready = elapsed >= dwellMs || pinchStarted || sample.poking;
 
       if (!ready) {
         tracker.setDwell(elapsed / dwellMs);

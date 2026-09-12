@@ -175,8 +175,9 @@ export function CameraGate({ onDone }: { onDone: () => void }) {
             <span className="eyebrow">Fraction Workshop</span>
             <h2>Ready to interact?</h2>
             <p>
-              This lesson lets you use your <strong>index finger</strong> to cut and colour things
-              on screen. Turn on your camera, or use your mouse instead - both work.
+              This lesson lets you point with your <strong>index finger</strong> and poke forward to
+              cut and colour things on screen. Turn on your camera, or use your mouse instead - both
+              work.
             </p>
             <div className="camera-gate__actions">
               <button className="btn btn--lg" onClick={startCamera}>
@@ -211,7 +212,8 @@ export function CameraGate({ onDone }: { onDone: () => void }) {
             <span className="eyebrow">Camera ready</span>
             <h2>Show your hand</h2>
             <p>
-              Hold your hand up to the camera and move your <strong>index finger</strong> to begin.
+              Hold your hand up to the camera. Point with your <strong>index finger</strong>, then
+              poke forward like you're pressing a button - that's how you'll select things.
             </p>
             <div className="camera-gate__actions">
               <button className="btn btn--city" onClick={() => { tracker.markOnboarded(); onDone(); }}>

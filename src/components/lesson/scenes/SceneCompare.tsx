@@ -105,7 +105,7 @@ export function SceneCompare({ rounds, onNext }: { rounds: CompareRound[]; onNex
             </button>
           </DwellTarget>
         ) : (
-          <span className="dialogue__hint">Point at the bigger fraction and hold still (or click).</span>
+          <span className="dialogue__hint">Point at the bigger fraction and poke forward (or click).</span>
         )}
       </DialogueBox>
     </div>

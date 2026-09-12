@@ -5,6 +5,7 @@ import { DwellTarget } from '../../tracker/DwellTarget';
 import { FractionCanvas, type Skin } from './FractionCanvas';
 import { Confetti } from './Confetti';
 import { DialogueBox } from './DialogueBox';
+import { fetchHint } from './hint';
 import {
   areEqualParts,
   buildRegions,
@@ -66,6 +67,8 @@ export function FractionTask({
   const [phase, setPhase] = useState<Phase>(requiredCuts > 0 ? 'cut' : 'shade');
   const [nudge, setNudge] = useState(false);
   const [line, setLine] = useState(askLine);
+  const [mistakeCount, setMistakeCount] = useState(0);
+  const [hintLoading, setHintLoading] = useState(false);
   const retryTimers = useRef<number[]>([]);
 
   const cutsToGo = Math.max(0, requiredCuts - cuts.length);
@@ -99,6 +102,7 @@ export function FractionTask({
   const rejectCut = (cut: Cut) => {
     setNudge(true);
     setLine(retryLine);
+    setMistakeCount((count) => count + 1);
     sfx.play('retry');
     retryTimers.current.push(
       window.setTimeout(() => {
@@ -119,6 +123,7 @@ export function FractionTask({
     }
 
     sfx.play('cut');
+    setMistakeCount(0);
 
     if (next.length < requiredCuts) {
       setLine(`Nice cut! ${next.length === requiredCuts - 1 ? 'One more to go.' : 'Keep going.'}`);
@@ -159,6 +164,15 @@ export function FractionTask({
       }
       return next;
     });
+  };
+
+  const requestHint = async () => {
+    const currentInstruction =
+      phase === 'shade' ? (shadeInstruction ?? `Colour ${requiredShaded} equal parts.`) : cutInstruction;
+    setHintLoading(true);
+    const hint = await fetchHint(objective, currentInstruction, mistakeCount);
+    setHintLoading(false);
+    if (hint) setLine(hint);
   };
 
   const shadedCount = shaded.length;
@@ -233,11 +247,18 @@ export function FractionTask({
             </button>
           </DwellTarget>
         ) : (
-          <span className="dialogue__hint">
-            {phase === 'cut'
-              ? 'Point where you want to cut, then hold still (or click).'
-              : 'Point at a part, then hold still (or click) to colour it.'}
-          </span>
+          <>
+            <span className="dialogue__hint">
+              {phase === 'cut'
+                ? 'Point where you want to cut, then poke forward (or click).'
+                : 'Point at a part, then poke forward (or click) to colour it.'}
+            </span>
+            {mistakeCount >= 2 && (
+              <button className="btn btn--ghost btn--sm" onClick={requestHint} disabled={hintLoading}>
+                {hintLoading ? 'Thinking...' : '💡 Get a hint from Poly'}
+              </button>
+            )}
+          </>
         )}
       </DialogueBox>
     </div>

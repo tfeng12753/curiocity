@@ -23,6 +23,13 @@ export interface CursorSample {
   source: TrackerMode;
   /** Index finger and thumb held together - an optional "tap" gesture. */
   pinching: boolean;
+  /**
+   * True for one sample right when a forward poke (fingertip jabbed toward
+   * the camera, then easing back) is detected - the primary way to commit
+   * in hand mode. Always false in pointer mode, where a click already does
+   * the same job.
+   */
+  poking: boolean;
 }
 
 export interface TrackerState {
@@ -43,7 +50,7 @@ const cursorListeners = new Set<(sample: CursorSample) => void>();
 const stateListeners = new Set<(state: TrackerState) => void>();
 const dwellListeners = new Set<(progress: number) => void>();
 
-let cursor: CursorSample = { x: 0, y: 0, visible: false, source: 'pointer', pinching: false };
+let cursor: CursorSample = { x: 0, y: 0, visible: false, source: 'pointer', pinching: false, poking: false };
 let state: TrackerState = {
   mode: 'pointer',
   status: 'idle',
@@ -62,6 +69,39 @@ let handMissingFrames = 0;
 
 const filterX = makeOneEuroFilter();
 const filterY = makeOneEuroFilter();
+
+// --- poke detection ---------------------------------------------------
+// MediaPipe's landmark z is depth relative to the wrist, roughly on the same
+// scale as x/y: smaller (more negative) is closer to the camera. A poke is a
+// quick jab toward the camera, so a fast enough drop in z within a short
+// window counts as one - scaled by the hand's own apparent size (handSpan)
+// so it works whether the student is sitting close to or far from the
+// camera. These constants are a starting point, not a calibrated final
+// answer - they can't be tuned against a real camera in this environment.
+const POKE_WINDOW_MS = 250;
+const POKE_COOLDOWN_MS = 450;
+const POKE_DEPTH_RATIO = 0.55;
+let zHistory: { z: number; t: number }[] = [];
+let lastPokeAt = -Infinity;
+
+function resetPokeDetector() {
+  zHistory = [];
+  lastPokeAt = -Infinity;
+}
+
+function detectPoke(z: number, handSpan: number, nowMs: number): boolean {
+  zHistory.push({ z, t: nowMs });
+  while (zHistory.length > 1 && nowMs - zHistory[0].t > POKE_WINDOW_MS) zHistory.shift();
+  if (nowMs - lastPokeAt < POKE_COOLDOWN_MS || zHistory.length < 3) return false;
+
+  const movedToward = zHistory[0].z - z;
+  if (movedToward > handSpan * POKE_DEPTH_RATIO) {
+    lastPokeAt = nowMs;
+    zHistory = [];
+    return true;
+  }
+  return false;
+}
 
 function emitCursor(next: CursorSample) {
   cursor = next;
@@ -84,6 +124,7 @@ function onPointerMove(event: PointerEvent | MouseEvent) {
     visible: true,
     source: 'pointer',
     pinching: false,
+    poking: false,
   });
 }
 
@@ -166,8 +207,9 @@ function loop() {
     if (handMissingFrames > 6 && state.handVisible) {
       filterX.reset();
       filterY.reset();
+      resetPokeDetector();
       patchState({ handVisible: false });
-      emitCursor({ ...cursor, visible: false, source: 'hand' });
+      emitCursor({ ...cursor, visible: false, source: 'hand', poking: false });
     }
     return;
   }
@@ -193,6 +235,7 @@ function loop() {
     visible: true,
     source: 'hand',
     pinching: pinchDistance / handSpan < 0.55,
+    poking: detectPoke(tip.z, handSpan, now * 1000),
   });
 }
 
@@ -290,6 +333,7 @@ export const tracker = {
     handMissingFrames = 0;
     filterX.reset();
     filterY.reset();
+    resetPokeDetector();
     cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(loop);
     patchState({ mode: 'hand', status: 'ready', error: null });

@@ -1,19 +1,24 @@
 /*
-  Tiny TTS proxy - its only job is to keep ELEVENLABS_API_KEY out of the
-  browser. No framework, no dependencies: one route that forwards text to
-  ElevenLabs and streams the audio back, plus a health check for Render.
+  Tiny proxy whose only job is to keep secret API keys out of the browser.
+  No framework, no dependencies: a couple of routes that forward to
+  ElevenLabs (narration) and IFM (Poly's hint generator), plus a health
+  check for Render.
 */
 import { createServer } from 'node:http';
 
 const PORT = process.env.PORT ?? 8787;
-const API_KEY = process.env.ELEVENLABS_API_KEY;
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? '21m00Tcm4TlvDq8ikWAM';
+const IFM_API_KEY = process.env.IFM_API_KEY;
+const IFM_MODEL = process.env.IFM_MODEL ?? 'IFM/K2-Horizon-375B-A23B';
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? '*';
 const MAX_TEXT_LENGTH = 500;
 const CACHE_LIMIT = 200;
 
-// Dialogue lines repeat a lot (kids replay lessons), so a small in-memory
-// cache turns most requests into a memory read instead of an API call.
+// Dialogue lines (and hint contexts) repeat a lot as kids replay lessons, so
+// a small in-memory cache turns most requests into a memory read instead of
+// an API call. Both /api/speak and /api/hint share this - separate key
+// prefixes keep them from colliding.
 const cache = new Map();
 
 function cacheGet(key) {
@@ -33,7 +38,7 @@ async function fetchSpeech(text, voiceId) {
   const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method: 'POST',
     headers: {
-      'xi-api-key': API_KEY,
+      'xi-api-key': ELEVENLABS_API_KEY,
       'content-type': 'application/json',
       accept: 'audio/mpeg',
     },
@@ -50,6 +55,54 @@ async function fetchSpeech(text, voiceId) {
   }
 
   return Buffer.from(await response.arrayBuffer());
+}
+
+const HINT_SYSTEM_PROMPT = `You are Poly, a friendly robot guide in a fractions game for 5th-6th graders.
+A student is stuck on a task. Write ONE short, warm, encouraging hint (max 2 short sentences).
+Never give away the exact answer or the exact numbers/positions to use. Guide their thinking instead.
+Keep vocabulary simple and age-appropriate. No emoji, no markdown, plain text only.`;
+
+async function fetchHint({ objective, instruction, mistakeCount }) {
+  const user = [
+    `Task: ${objective}`,
+    `Instruction: ${instruction}`,
+    `The student has missed this ${mistakeCount} time${mistakeCount === 1 ? '' : 's'} in a row.`,
+    mistakeCount >= 3
+      ? 'They are getting frustrated - be extra encouraging and give a slightly bigger nudge.'
+      : 'Keep it light - a small nudge is enough.',
+  ].join('\n');
+
+  const response = await fetch('https://api.ifm.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${IFM_API_KEY}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: IFM_MODEL,
+      messages: [
+        { role: 'system', content: HINT_SYSTEM_PROMPT },
+        { role: 'user', content: user },
+      ],
+      // This model reasons before answering (message.reasoning /
+      // reasoning_content, separate from the actual message.content) - a
+      // small max_tokens cuts it off mid-thought before it ever reaches the
+      // real answer, so this needs real headroom even though the final hint
+      // itself is one short sentence.
+      max_tokens: 600,
+      temperature: 0.8,
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`IFM ${response.status}: ${detail.slice(0, 300)}`);
+  }
+
+  const data = await response.json();
+  const hint = data.choices?.[0]?.message?.content?.trim();
+  if (!hint) throw new Error('IFM response had no hint content');
+  return hint;
 }
 
 function withCors(res) {
@@ -90,7 +143,7 @@ const server = createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && req.url === '/api/speak') {
-    if (!API_KEY) {
+    if (!ELEVENLABS_API_KEY) {
       res.writeHead(503, { 'content-type': 'application/json' }).end(
         JSON.stringify({ error: 'ELEVENLABS_API_KEY is not configured' }),
       );
@@ -129,10 +182,52 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && req.url === '/api/hint') {
+    if (!IFM_API_KEY) {
+      res.writeHead(503, { 'content-type': 'application/json' }).end(
+        JSON.stringify({ error: 'IFM_API_KEY is not configured' }),
+      );
+      return;
+    }
+
+    try {
+      const { objective, instruction, mistakeCount } = await readJsonBody(req);
+      if (typeof objective !== 'string' || !objective.trim() || objective.length > 200) {
+        res.writeHead(400, { 'content-type': 'application/json' }).end(
+          JSON.stringify({ error: 'objective must be a non-empty string up to 200 chars' }),
+        );
+        return;
+      }
+      if (typeof instruction !== 'string' || instruction.length > 300) {
+        res.writeHead(400, { 'content-type': 'application/json' }).end(
+          JSON.stringify({ error: 'instruction must be a string up to 300 chars' }),
+        );
+        return;
+      }
+      const misses = Number.isInteger(mistakeCount) ? Math.min(Math.max(mistakeCount, 0), 10) : 1;
+
+      const key = `hint::${objective}::${instruction}::${misses}`;
+      let hint = cacheGet(key);
+      if (!hint) {
+        hint = await fetchHint({ objective, instruction, mistakeCount: misses });
+        cacheSet(key, hint);
+      }
+
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ hint }));
+    } catch (error) {
+      console.error('[hint] failed:', error.message);
+      res.writeHead(502, { 'content-type': 'application/json' }).end(
+        JSON.stringify({ error: 'Failed to generate a hint' }),
+      );
+    }
+    return;
+  }
+
   res.writeHead(404, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'Not found' }));
 });
 
 server.listen(PORT, () => {
-  console.log(`[voice] listening on :${PORT}`);
-  if (!API_KEY) console.warn('[voice] ELEVENLABS_API_KEY is not set - /api/speak will return 503');
+  console.log(`[server] listening on :${PORT}`);
+  if (!ELEVENLABS_API_KEY) console.warn('[server] ELEVENLABS_API_KEY is not set - /api/speak will return 503');
+  if (!IFM_API_KEY) console.warn('[server] IFM_API_KEY is not set - /api/hint will return 503');
 });

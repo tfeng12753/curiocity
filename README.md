@@ -126,41 +126,44 @@ node scripts/playthrough.mjs   # full mouse playthrough, screenshots to /tmp/sho
 node scripts/camera-check.mjs  # verifies hand tracking initialises end to end
 ```
 
-## Voice (optional)
+## Voice and AI hints (both optional)
 
-Poly can read her dialogue lines aloud with ElevenLabs. It's entirely
-optional — with no key configured, `/api/speak` returns a clear error, the
-frontend swallows it, and the lesson runs exactly as before, text-only.
+Poly can read her dialogue lines aloud with ElevenLabs, and can generate a
+fresh, contextual hint (via IFM) when a student is stuck instead of the same
+static retry line every time. Both are entirely optional and independent —
+with no key configured, `/api/speak` or `/api/hint` returns a clear error,
+the frontend swallows it, and the lesson runs exactly as before.
 
-ElevenLabs' API needs a secret key that can't live in client-side code, so
-this is the one deliberate exception to "no server" below: `server/` is a
-small, dependency-free Node proxy whose only job is to hold that key and
-forward text-to-speech requests. Dialogue lines repeat a lot as kids replay
-lessons, so it also caches synthesised audio in memory.
+Both APIs need a secret key that can't live in client-side code, so this is
+the one deliberate exception to "no server" below: `server/` is a small,
+dependency-free Node proxy whose only job is to hold those keys and forward
+requests. Dialogue lines and hint contexts repeat a lot as kids replay
+lessons, so both are cached in memory.
 
 To run it locally:
 
 ```bash
-cp server/.env.example server/.env   # fill in ELEVENLABS_API_KEY
-npm run dev:voice                    # starts the proxy on :8787
+cp server/.env.example server/.env   # fill in ELEVENLABS_API_KEY and/or IFM_API_KEY
+npm run dev:server                   # starts the proxy on :8787
 npm run dev                          # the Vite dev server proxies /api to it
 ```
 
 In production the two halves are separate Render services (see
-`render.yaml`): the static site gets a build-time `VITE_VOICE_ENDPOINT`
-pointing at the proxy's URL, and the proxy gets `ELEVENLABS_API_KEY` (and
-optionally `ELEVENLABS_VOICE_ID`) set as secrets in the Render dashboard.
+`render.yaml`): the static site gets a build-time `VITE_API_ENDPOINT`
+pointing at the proxy's URL, and the proxy gets `ELEVENLABS_API_KEY`,
+`IFM_API_KEY` (and optionally `ELEVENLABS_VOICE_ID` / `IFM_MODEL`) set as
+secrets in the Render dashboard.
 
 **Important:** `render.yaml`'s `headers`, `envVars`, and the second service
 only take effect if Render deployed this repo via **New → Blueprint**. If the
 static site was instead created by hand (**New → Static Site**), Render still
 auto-deploys on every push but silently ignores everything else in
-`render.yaml` — in that case set `VITE_VOICE_ENDPOINT` and the
+`render.yaml` — in that case set `VITE_API_ENDPOINT` and the
 `Permissions-Policy` header directly in that service's dashboard, and create
 the proxy as its own **New → Web Service** pointed at the `server/` directory
 (root directory `server`, build command `npm ci`, start command `npm start`),
-copying `ELEVENLABS_API_KEY` / `ELEVENLABS_VOICE_ID` / `ALLOWED_ORIGIN` into
-its Environment tab.
+copying `ELEVENLABS_API_KEY` / `ELEVENLABS_VOICE_ID` / `IFM_API_KEY` /
+`ALLOWED_ORIGIN` into its Environment tab.
 
 ## Deploying
 

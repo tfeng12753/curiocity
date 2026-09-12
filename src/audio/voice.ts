@@ -5,7 +5,7 @@
 */
 import { sfx } from './sound';
 
-const ENDPOINT = (import.meta.env.VITE_VOICE_ENDPOINT ?? '/api').replace(/\/$/, '');
+const ENDPOINT = (import.meta.env.VITE_API_ENDPOINT ?? '/api').replace(/\/$/, '');
 const CACHE_LIMIT = 40;
 
 interface SpeakOptions {
