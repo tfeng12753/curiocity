@@ -1,92 +1,153 @@
-# Curio City
+# LEARNVERSE
 
-A single-file, browser-native learning app: a kid stands in front of their
-webcam and uses just their hand to interact with lessons composited into
-their own camera view - no mouse required, no backend, no build step.
-Everything (hand tracking, drawing, all interaction logic) runs fully
-client-side using MediaPipe's in-browser HandLandmarker.
+An explorable learning world for 5th–6th graders. Instead of a course catalogue,
+students fly into a world of subject cities, travel a game map, land on a
+destination, and **learn by doing** — cutting a pizza into halves with their own
+index finger in front of the webcam.
+
+The complete journey is playable:
+
+```
+LANDING WORLD → MATH CITY MAP → FRACTION WORKSHOP → INTERACTIVE LESSON → COMPLETION
+```
+
+Math City's **Fraction Workshop** is the fully playable level. Physics City and
+Chemistry City are built out as real destinations on the world map so the shape
+of the product is obvious, with their levels marked *coming soon*.
 
 ## Running it
 
-This is a single static HTML file - no `npm install`, no build step.
-
 ```bash
-python3 -m http.server 8000
+npm install
+npm run dev
 ```
 
-Then open `http://localhost:8000/index.html` in Chrome or Edge and allow
-camera access when prompted. (Opening the file directly via `file://` also
-mostly works, but some browsers restrict camera access on `file://` origins,
-so a local server is the more reliable option.)
+Then open the printed URL in Chrome or Edge. The lesson asks for camera access
+when the first hands-on activity starts; declining is fine — everything works
+with a mouse or trackpad.
 
-First load downloads MediaPipe's hand-tracking model from Google's model CDN
-(a few MB, cached afterward) - this needs an internet connection once, but
-all inference runs locally on your device from then on, not on a server.
+```bash
+npm run build     # typecheck + production build
+npm run preview   # serve the production build
+```
 
-## What's inside
+First load of hand tracking fetches MediaPipe's hand-landmark model from Google's
+model CDN (a few MB, cached afterwards). The WebAssembly runtime is copied out of
+`node_modules` into `public/mediapipe/wasm` on install, so it is served from your
+own origin, with the jsDelivr copy as a runtime fallback. Inference always runs
+locally on the device — video never leaves the browser, and there is no backend.
 
-Three lessons, each demonstrating a different hand-driven interaction style:
+## The fraction lesson
 
-- **Geometry & Right Angles** - freehand annotate directly on top of your
-  live camera feed by pointing; tap the floating object to inspect it.
-- **Fractions & Pizza Slices** - point near the edge of a circle and press
-  "Add Cut" to slice all the way through the center, like cutting a real
-  pizza. Tracks how many equal pieces you've made and whether they're
-  evenly spaced.
-- **Curio City** - a little museum of five floating curiosities (an
-  octopus, Saturn, a volcano, a T-Rex, a magnet). Point at one and hold
-  your finger steady for about 800ms to reveal a fact about it - dwell-based
-  selection rather than a pinch/tap, since precise pinch detection is
-  unreliable at typical laptop-webcam distances, especially for smaller
-  kid hands.
+The lesson follows one loop over and over: **ask → student acts → feedback →
+explain**. There are no lecture paragraphs and no video.
 
-Also included: a rewards screen, a "real-world project" prompt, and a
-community hub (leaderboard + snapshot gallery) - all backed by
-`localStorage`, no server involved.
+1. **Meet the whole** — is this pizza whole, or in pieces?
+2. **Share it** — cut the pizza into 2 equal parts.
+3. **1/2** — the same pizza next to the written fraction, with each number labelled.
+4. **Build 1/2** — cut a circle, then colour one of the two parts.
+5. **Fourths** — three cuts across a chocolate bar for four friends.
+6. **1/4** — the notation again, on the bar.
+7. **Divide a square** — one cut each way; unequal attempts are handed back, not corrected.
+8. **Show 2/4** — colour two of four equal parts.
+9. **Spot the fraction** — pick the picture that shows 1/2, then 2/4.
+10. **Summary** — whole → equal parts → fraction, and why the parts must be equal.
+11. **Final challenge** — make 1/2, then 1/4, then 3/4.
+12. **Completion** — recap, ⭐ Fraction Explorer badge, back to Math City (now marked complete).
 
-## How it works
+## How the interaction works
 
-- **Hand tracking**: MediaPipe's `HandLandmarker` (`tasks-vision`, loaded
-  from `cdn.jsdelivr.net`) runs in `VIDEO` mode against the webcam feed.
-  Landmark 8 (the index fingertip) drives every interaction; a small
-  One Euro filter smooths it frame-to-frame so tracking jitter doesn't
-  show up as shaky drawing or a shaky selection ring.
-- **Drawing** maps the fingertip 1:1 to canvas pixels (mirrored to match
-  the mirrored video display) and paints a continuous stroke while a hand
-  is visible - lifting the "pen" the moment the hand leaves frame, so
-  strokes don't jump across gaps.
-- **Fraction slicing** tracks the angle from the circle's center to the
-  fingertip, previews it live as a dashed line, and commits a full
-  diameter cut on "Add Cut" - so each cut mirrors a real pizza slice
-  (N cuts → 2N pieces), and evenness is just comparing the angular gaps
-  between committed cuts.
-- **Curio City's dwell-to-select** hit-tests the fingertip position
-  against each floating curiosity's on-screen bounding box every frame,
-  and requires ~800ms of *continuous* hovering over the same one before it
-  reveals - moving away resets the timer, and holding past the reveal
-  doesn't re-trigger it repeatedly.
+Everything a student touches goes through one component, `InteractiveSurface`,
+which accepts either input and behaves the same way:
 
-## A note on the code structure
+- **Finger** — MediaPipe's `HandLandmarker` runs on the webcam feed in `VIDEO`
+  mode. Landmark 8 (the index fingertip) is mirrored to match the mirrored
+  preview and smoothed with a One Euro filter, so a held-still finger stops
+  shaking without a fast swipe lagging behind. Holding still over a target for
+  ~0.9s commits the action (a pinch works too); the ring around the cursor fills
+  to show the hold. Dwell beats pinch detection as the primary gesture at typical
+  laptop-webcam distance, especially for smaller hands.
+- **Pointer** — mouse, trackpad or touch, with click to commit. This is a first
+  class path, not a degraded one: if the camera is missing, blocked or slow, the
+  lesson plays identically.
 
-This started as a single generated HTML file and stayed one on purpose -
-it's meant to be simple to open, read top-to-bottom, and modify. The
-`<script>` tag is a JS module (needed for MediaPipe's ES module import), so
-every function referenced by an inline `onclick=""` in the HTML has to be
-explicitly exposed via `Object.assign(window, {...})` at the bottom of the
-script - classic scripts leak top-level functions onto `window`
-automatically, modules don't. If you add a new button with an `onclick`,
-add its handler to that list too.
+## The fraction geometry
 
-## Requirements
+`fractionGeometry.ts` holds the entire model, and every activity is a
+configuration of it:
 
-- A recent Chromium-based browser (WebGL2 + WASM + `getUserMedia`).
-- A webcam.
-- An internet connection on first load (to fetch the hand-tracking model).
+- A shape is a **whole plus a list of cuts**. A cut is either radial (through the
+  centre, for the pizza) or a straight line across the shape at a normalised
+  position (for bars and squares).
+- **Regions** — the actual pieces — are derived from the cuts on every render,
+  as circle sectors or grid cells, each with its own path, area and hit box.
+- **"Equal parts"** is then just: do all the derived regions have the same area?
+  That single rule validates the pizza, the chocolate bar and the square.
+- Cuts **snap** to sensible positions (halves, thirds, quarters; 45° steps) when
+  the student is close, because children aim rather than measure. A cut that
+  lands far off still produces unequal parts, which fails the check — the shape
+  gives a gentle wobble, Poly points out that the parts must match, and the cut
+  is taken back so they can try again. The answer is never shown for them.
+- On shapes needing one cut each way, the second cut is locked to the missing
+  axis, so a roughly-centred aim always succeeds.
 
-## Known limitations
+## Project structure
 
-- One hand only; no mobile/touch fallback if a webcam or WebGL2 isn't
-  available (falls back to an "Interactive Avatar Mode" placeholder).
-- Points, badges, and gallery snapshots are stored in `localStorage` only -
-  they're per-browser and not synced anywhere.
-- No accounts, no multiplayer, no server - by design, for this prototype.
+```
+src/
+  data/cities.ts            cities, destinations, map positions
+  state/progress.tsx        completion + badges, persisted to localStorage
+  audio/sound.ts            synthesised cues (no audio files), with a mute toggle
+  tracker/                  hand tracking, cursor, dwell, camera onboarding
+    trackerStore.ts         MediaPipe + pointer fused into one cursor stream
+    InteractiveSurface.tsx  hover/commit surface shared by every activity
+    DwellTarget.tsx         any button, also activatable by holding the finger
+  components/
+    world/                  landing world + illustrated city islands
+    city/                   city maps, destination nodes, landmark art
+    level/                  level entrance
+    lesson/                 fraction workshop, geometry, scenes
+scripts/
+  playthrough.mjs           clicks through the entire lesson and asserts it completes
+  camera-check.mjs          boots hand tracking against a synthetic camera
+  sync-mediapipe-wasm.mjs   copies the wasm runtime into public/ (runs on install)
+```
+
+All the illustration is hand-written SVG and CSS — no image assets, no icon font.
+
+## Checking it works
+
+With `npm run dev` running:
+
+```bash
+node scripts/playthrough.mjs   # full mouse playthrough, screenshots to /tmp/shots/play
+node scripts/camera-check.mjs  # verifies hand tracking initialises end to end
+```
+
+## Deploying
+
+This is a static build, so any static host works. `render.yaml` at the repo root
+is a Render blueprint — point Render at the repository and it picks the settings
+up automatically. To configure a static site by hand instead:
+
+| Setting           | Value                    |
+| ----------------- | ------------------------ |
+| Build command     | `npm ci && npm run build` |
+| Publish directory | `dist`                   |
+| Rewrite rule      | `/*` → `/index.html`     |
+
+The app keeps every scene on a single page, so the rewrite is a safety net rather
+than a requirement today — it keeps unknown paths landing on the app instead of a
+404. The camera only works over HTTPS, which Render terminates for you.
+
+## Notes and limitations
+
+- Optimised for desktop and laptop, where the camera interaction makes sense; the
+  layout adapts down to tablets and narrow screens, keeping the learning object
+  and the controls visible.
+- One hand, one fingertip. No multi-hand or gesture vocabulary.
+- Progress and badges live in `localStorage` — per browser, not synced.
+- No accounts, no server, no build-time backend, by design for this prototype.
+
+The previous single-file prototype is preserved at
+`legacy/curio-city-prototype.html`.
