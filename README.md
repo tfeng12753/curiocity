@@ -141,19 +141,55 @@ node scripts/playthrough.mjs   # full mouse playthrough, screenshots to /tmp/sho
 node scripts/camera-check.mjs  # verifies hand tracking initialises end to end
 ```
 
-## Voice and AI hints (both optional)
+## Voice and AI (both optional)
 
-Curio can read her dialogue lines aloud with ElevenLabs, and can generate a
-fresh, contextual hint (via IFM) when a student is stuck instead of the same
-static retry line every time. Both are entirely optional and independent —
-with no key configured, `/api/speak` or `/api/hint` returns a clear error,
-the frontend swallows it, and the lesson runs exactly as before.
+Curio reads her dialogue aloud with ElevenLabs, and speaks for herself via
+IFM in three places, all behind `POST /api/curio` with an `intent`:
+
+| Intent   | Where it shows up                                                    |
+| -------- | -------------------------------------------------------------------- |
+| `hint`   | A contextual nudge when a student is stuck, instead of the same static retry line |
+| `ask`    | **Ask me anything** in the dialogue box — a child's own question, answered in Curio's voice and read aloud |
+| `recap`  | The completion screen, describing what *this* run actually covered instead of a fixed blurb |
+| `praise` | Available and prompted, not yet wired to a surface (see the note below) |
+
+One endpoint rather than one per feature: the intents share a persona, a
+cache and a failure mode, so a new place for Curio to speak is a prompt plus
+a call site. The persona lives in `CURIO_PERSONA` in `server/index.mjs` —
+that single string is where her whimsy is tuned.
+
+Everything is optional and degrades quietly. With no key configured, or the
+proxy offline, `src/ai/curio.ts` returns `null` and every caller falls back
+to written copy; narration falls back to the browser's own speech synthesis.
+AI only ever *upgrades* what a child sees — it never gates it.
+
+**Two budgets protect the keys**, because they're a fixed monthly allowance
+shared by every child on the site and one bored student holding down "Ask"
+could spend it all:
+
+- `CALL_BUDGET` in `src/ai/curio.ts` — AI replies per page visit (15)
+- `SYNTH_BUDGET` in `src/audio/voice.ts` — *new* narration lines per visit (40); repeats come from cache and cost nothing
+
+Past either, the product behaves exactly as it does with no key at all.
+
+> **Narration is the expensive one.** Every dialogue line is a request, and
+> the proxy's in-memory cache is wiped whenever a free Render instance spins
+> down — so a cold start re-synthesises everything. If the quota becomes a
+> problem, caching audio in the browser across sessions is the biggest win
+> available.
 
 Both APIs need a secret key that can't live in client-side code, so this is
 the one deliberate exception to "no server" below: `server/` is a small,
 dependency-free Node proxy whose only job is to hold those keys and forward
-requests. Dialogue lines and hint contexts repeat a lot as kids replay
-lessons, so both are cached in memory.
+requests.
+
+**Picking a voice is a trap on the free plan.** ElevenLabs rejects Voice
+Library voices over the API with `402 Free users cannot use library voices`,
+and that covers most of the famous IDs — Rachel, Aria, Domi, Charlotte, Elli.
+Only the account's own default voices work. Six that are verified working are
+listed above `DEFAULT_VOICE_ID` in `server/index.mjs`; set `ELEVENLABS_VOICE_ID`
+to switch. If that override turns out to be unusable, the proxy logs the real
+reason and falls back to a known-good voice rather than going silent.
 
 To run it locally:
 

@@ -5,7 +5,7 @@ import { DwellTarget } from '../../tracker/DwellTarget';
 import { FractionCanvas, type Skin } from './FractionCanvas';
 import { Confetti } from './Confetti';
 import { DialogueBox } from './DialogueBox';
-import { fetchHint } from './hint';
+import { curio } from '../../ai/curio';
 import {
   areEqualParts,
   buildRegions,
@@ -170,7 +170,7 @@ export function FractionTask({
     const currentInstruction =
       phase === 'shade' ? (shadeInstruction ?? `Colour ${requiredShaded} equal parts.`) : cutInstruction;
     setHintLoading(true);
-    const hint = await fetchHint(objective, currentInstruction, mistakeCount);
+    const hint = await curio.hint(objective, currentInstruction, mistakeCount);
     setHintLoading(false);
     if (hint) setLine(hint);
   };

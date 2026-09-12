@@ -15,6 +15,17 @@ import { speakable } from './speakable';
 const ENDPOINT = (import.meta.env.VITE_API_ENDPOINT ?? '/api').replace(/\/$/, '');
 const CACHE_LIMIT = 40;
 
+/*
+  Narration is the biggest consumer of the ElevenLabs quota by far - every
+  dialogue line in every lesson is a request, and the server's cache is lost
+  whenever a free-tier instance spins down. This caps how many *new* lines one
+  visit can synthesise; repeats still come from the cache below and cost
+  nothing. Past the cap Curio keeps talking in the browser's own voice rather
+  than going silent.
+*/
+const SYNTH_BUDGET = 40;
+let synthesised = 0;
+
 /**
  * Falling back to browser speech is meant to be graceful, not invisible. It was
  * invisible: because Curio still talked, a completely unreachable narration
@@ -191,6 +202,11 @@ async function fetchSpeechUrl(text: string, voiceId: string | undefined, control
   const key = `${voiceId ?? ''}::${text}`;
   const cached = blobCache.get(key);
   if (cached) return cached;
+  if (synthesised >= SYNTH_BUDGET) {
+    warnFallback(`narration budget of ${SYNTH_BUDGET} new lines used up for this visit`);
+    return null;
+  }
+  synthesised += 1;
 
   const response = await fetch(`${ENDPOINT}/speak`, {
     method: 'POST',

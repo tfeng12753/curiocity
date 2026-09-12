@@ -469,6 +469,50 @@
   flex-wrap: wrap;
 }
 
+/* "Ask Curio" is deliberately quieter than the lesson's own buttons - it is
+   always available, but it must never compete with the step the child is
+   actually on. */
+.dialogue__ask-open {
+  margin-left: auto;
+  opacity: 0.85;
+}
+
+.dialogue__ask-open:hover {
+  opacity: 1;
+}
+
+.dialogue__ask {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dialogue__ask-input {
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: 11px 16px;
+  border: 2px solid var(--violet-200);
+  border-radius: var(--r-pill);
+  background: var(--panel);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.dialogue__ask-input::placeholder {
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.dialogue__ask-input:focus {
+  outline: none;
+  border-color: var(--violet-500);
+  box-shadow: 0 0 0 4px var(--violet-050);
+}
+
 .dialogue__hint {
   font-size: 0.86rem;
   font-weight: 700;

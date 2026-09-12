@@ -127,21 +127,69 @@ async function fetchSpeech(text, requestedVoice) {
   return Buffer.from(await response.arrayBuffer());
 }
 
-const HINT_SYSTEM_PROMPT = `You are Curio, the student's warm, endlessly encouraging learning buddy in a fractions game for 5th-6th graders.
-A student is stuck on a task. Write ONE short, warm, encouraging hint (max 2 short sentences).
-Never give away the exact answer or the exact numbers/positions to use. Guide their thinking instead.
-Keep vocabulary simple and age-appropriate. No emoji, no markdown, plain text only.`;
+/*
+  Every AI surface in the product speaks as the same character, so the persona
+  is written once and each intent only adds its own job on top. Keeping them
+  in one place is what stops Curio from being warm in a hint and robotic in a
+  celebration.
+*/
+const CURIO_PERSONA = `You are Curio: a small, round, sparkly creature who lives in Curio-City and is this child's learning buddy. You are 9-12 year olds' favourite kind of grown-up-ish friend - the one who gets excited about things.
+You genuinely believe maths is the most delightful thing in the universe and you cannot believe your luck that someone turned up to do it with you.
 
-async function fetchHint({ objective, instruction, mistakeCount }) {
-  const user = [
-    `Task: ${objective}`,
-    `Instruction: ${instruction}`,
-    `The student has missed this ${mistakeCount} time${mistakeCount === 1 ? '' : 's'} in a row.`,
-    mistakeCount >= 3
-      ? 'They are getting frustrated - be extra encouraging and give a slightly bigger nudge.'
-      : 'Keep it light - a small nudge is enough.',
-  ].join('\n');
+How you talk:
+- Warm, playful, a little bit silly. Delighted by everything. Never sarcastic, never at the child's expense, never condescending.
+- SHORT. You are speaking out loud to one child who wants to get back to playing.
+- Reach for pictures they can see: pizza, chocolate bars, sharing sweets with a friend, cutting a cake, a dragon's hoard, puddles, pancakes.
+- You may be playfully dramatic ("Ooooh!", "Wait, wait -", "This is my favourite bit"), and you may be a bit whimsical about the world of Curio-City itself.
+- Never use emoji, markdown, lists or headings. Plain spoken sentences only.
+- Write fractions in words the way you would say them out loud ("one half", "two sixths"), never as "1/2", because your words are read aloud.`;
 
+const INTENTS = {
+  hint: {
+    system: `${CURIO_PERSONA}
+The child is stuck. Give ONE short, warm nudge - at most two sentences - that gets them thinking without handing over the answer.
+Never state the answer, the exact numbers, or where to cut. Wonder out loud alongside them instead.`,
+    build: ({ objective, instruction, mistakeCount }) =>
+      [
+        `Task: ${objective}`,
+        `Instruction: ${instruction}`,
+        `The child has missed this ${mistakeCount} time${mistakeCount === 1 ? '' : 's'} in a row.`,
+        mistakeCount >= 3
+          ? 'They are getting frustrated - be extra warm, and make the nudge a little bigger.'
+          : 'Keep it light - a small nudge is plenty.',
+      ].join('\n'),
+  },
+
+  praise: {
+    system: `${CURIO_PERSONA}
+The child just got something RIGHT. Celebrate like it made your whole day - one sentence, two at the very most.
+Name the specific thing they did so it feels seen rather than generic. Do not ask a question and do not introduce the next task.`,
+    build: ({ objective, detail }) =>
+      [`They just completed: ${objective}`, detail ? `How it went: ${detail}` : ''].filter(Boolean).join('\n'),
+  },
+
+  recap: {
+    system: `${CURIO_PERSONA}
+The child just finished a whole lesson. In at most two short sentences, tell them what THEY worked out, and sound thoroughly proud of them.
+Do not list the steps back at them, and do not mention being an AI.`,
+    build: ({ objective, detail }) =>
+      [`Lesson finished: ${objective}`, detail ? `What they did: ${detail}` : ''].filter(Boolean).join('\n'),
+  },
+
+  ask: {
+    system: `${CURIO_PERSONA}
+The child has asked YOU something. Answer in at most three short sentences, with a picture they can imagine rather than a definition.
+If it is not about maths or about what they are doing here, be cheerfully honest that maths is your speciality, and wander back to the lesson with them.
+Never ask for, repeat, or store anything personal about them. If something sounds upsetting or unsafe, gently suggest they talk to their teacher or a grown-up they trust.`,
+    build: ({ question, objective }) =>
+      [objective ? `They are currently working on: ${objective}` : '', `Their question: ${question}`]
+        .filter(Boolean)
+        .join('\n'),
+  },
+};
+
+async function callIFM(intent, context) {
+  const spec = INTENTS[intent];
   const response = await fetch('https://api.ifm.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -151,14 +199,14 @@ async function fetchHint({ objective, instruction, mistakeCount }) {
     body: JSON.stringify({
       model: IFM_MODEL,
       messages: [
-        { role: 'system', content: HINT_SYSTEM_PROMPT },
-        { role: 'user', content: user },
+        { role: 'system', content: spec.system },
+        { role: 'user', content: spec.build(context) },
       ],
       // This model reasons before answering (message.reasoning /
       // reasoning_content, separate from the actual message.content) - a
       // small max_tokens cuts it off mid-thought before it ever reaches the
-      // real answer, so this needs real headroom even though the final hint
-      // itself is one short sentence.
+      // real answer, so this needs real headroom even though the reply
+      // itself is one or two short sentences.
       max_tokens: 600,
       temperature: 0.8,
     }),
@@ -170,9 +218,13 @@ async function fetchHint({ objective, instruction, mistakeCount }) {
   }
 
   const data = await response.json();
-  const hint = data.choices?.[0]?.message?.content?.trim();
-  if (!hint) throw new Error('IFM response had no hint content');
-  return hint;
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('IFM response had no content');
+  return text;
+}
+
+function fetchHint(context) {
+  return callIFM('hint', context);
 }
 
 function withCors(res) {
@@ -288,6 +340,74 @@ const server = createServer(async (req, res) => {
       console.error('[hint] failed:', error.message);
       res.writeHead(502, { 'content-type': 'application/json' }).end(
         JSON.stringify({ error: 'Failed to generate a hint' }),
+      );
+    }
+    return;
+  }
+
+  // One route for every AI surface. Intents share a persona, a cache and a
+  // failure mode, so adding a new place for Curio to speak is a prompt here
+  // plus a call site - not another endpoint, another key check and another
+  // set of CORS rules to get subtly wrong.
+  if (req.method === 'POST' && req.url === '/api/curio') {
+    if (!IFM_API_KEY) {
+      res.writeHead(503, { 'content-type': 'application/json' }).end(
+        JSON.stringify({ error: 'IFM_API_KEY is not configured' }),
+      );
+      return;
+    }
+
+    try {
+      const body = await readJsonBody(req);
+      const intent = typeof body.intent === 'string' ? body.intent : '';
+      if (!Object.hasOwn(INTENTS, intent)) {
+        res.writeHead(400, { 'content-type': 'application/json' }).end(
+          JSON.stringify({ error: `intent must be one of: ${Object.keys(INTENTS).join(', ')}` }),
+        );
+        return;
+      }
+
+      const text = (value, limit) =>
+        typeof value === 'string' ? value.trim().slice(0, limit) : '';
+
+      const context = {
+        objective: text(body.objective, 200),
+        instruction: text(body.instruction, 300),
+        detail: text(body.detail, 300),
+        question: text(body.question, 300),
+        mistakeCount: Number.isInteger(body.mistakeCount)
+          ? Math.min(Math.max(body.mistakeCount, 0), 10)
+          : 1,
+      };
+
+      if (intent === 'ask' && !context.question) {
+        res.writeHead(400, { 'content-type': 'application/json' }).end(
+          JSON.stringify({ error: 'question must be a non-empty string up to 300 chars' }),
+        );
+        return;
+      }
+      if (intent !== 'ask' && !context.objective) {
+        res.writeHead(400, { 'content-type': 'application/json' }).end(
+          JSON.stringify({ error: 'objective must be a non-empty string up to 200 chars' }),
+        );
+        return;
+      }
+
+      // Praise is deliberately uncached: hearing the same celebration twice
+      // is exactly what makes a canned line feel canned, and it is the one
+      // intent whose whole value is sounding spontaneous.
+      const key = `${intent}::${context.objective}::${context.instruction}::${context.question}::${context.detail}::${context.mistakeCount}`;
+      let reply = intent === 'praise' ? null : cacheGet(key);
+      if (!reply) {
+        reply = await callIFM(intent, context);
+        if (intent !== 'praise') cacheSet(key, reply);
+      }
+
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ text: reply }));
+    } catch (error) {
+      console.error('[curio] failed:', error.message);
+      res.writeHead(502, { 'content-type': 'application/json' }).end(
+        JSON.stringify({ error: 'Curio could not answer right now' }),
       );
     }
     return;
