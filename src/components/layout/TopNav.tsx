@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { sfx } from '../../audio/sound';
 import { useProgress } from '../../state/progress';
 import { Logo } from './Logo';
+import { Icon } from '../icons/Icon';
 import './layout.css';
 
 export type NavPanel = 'progress' | 'achievements' | 'customize' | null;
@@ -56,10 +57,12 @@ export function TopNav({ onHome, openPanel, onOpenPanel, compact = false }: TopN
 
       <div className="topnav__right">
         <span className="pill topnav__score" title="Coins earned">
-          🪙 {coins}
+          <Icon name="coin" size={18} />
+          {coins}
         </span>
         <span className="pill topnav__score" title="Levels completed">
-          ⭐ {totalComplete} / {totalLevels}
+          <Icon name="star" size={18} />
+          {totalComplete} / {totalLevels}
         </span>
         <button
           className="topnav__icon"
@@ -67,7 +70,7 @@ export function TopNav({ onHome, openPanel, onOpenPanel, compact = false }: TopN
           aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
           title={muted ? 'Unmute sounds' : 'Mute sounds'}
         >
-          {muted ? '🔇' : '🔊'}
+          <Icon name={muted ? 'sound-off' : 'sound-on'} size={20} />
         </button>
       </div>
     </header>

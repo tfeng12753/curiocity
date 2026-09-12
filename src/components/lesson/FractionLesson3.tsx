@@ -152,7 +152,7 @@ export function FractionLesson3({ onExit, onKeepExploring }: FractionLesson3Prop
             cityId="math"
             levelId="fractions-3"
             badgeId="fraction-master"
-            title="Fraction Challenge Complete! 🚀"
+            title="Fraction Challenge Complete!"
             blurb="You practiced everything - halves, fourths, thirds and sixths - and proved you can compare fractions."
             learned={[
               'Mixed practice with halves, fourths and thirds',

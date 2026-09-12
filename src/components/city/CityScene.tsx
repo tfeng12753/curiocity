@@ -6,8 +6,13 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { VEHICLES } from '../../data/vehicles';
 import { sfx } from '../../audio/sound';
 import { DwellTarget } from '../../tracker/DwellTarget';
+import { Icon } from '../icons/Icon';
 import { Landmark } from './Landmarks';
-import { Boat, Cloud } from '../world/IslandBase';
+import { Boat, Cloud, IslandBase } from '../world/IslandBase';
+import { PlayerCharacter } from '../player/PlayerCharacter';
+
+/** Small helper so the island's grass can green up once a level is finished. */
+const complete0 = (state: string) => state === 'is-complete';
 import './city.css';
 
 /** Ambient sky and sea props so the map reads as a place, not a diagram. */
@@ -99,7 +104,7 @@ interface CitySceneProps {
 
 export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
   const city = CITIES[cityId];
-  const { isLevelComplete, isLevelUnlocked, cityProgress } = useProgress();
+  const { isLevelComplete, isLevelUnlocked, cityProgress, equippedCosmetics } = useProgress();
   const { done, total } = cityProgress(cityId);
   const [toast, setToast] = useState<string | null>(null);
   // The absolute-positioned map has `overflow: hidden` and node positions
@@ -112,6 +117,24 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
   // window, not just a phone). Below either, fall back to the plain
   // scrollable list, which has no such fixed-height assumptions.
   const compact = useMediaQuery('(max-width: 900px), (max-height: 820px)');
+
+  /**
+   * Where the student currently stands: the first level they have not finished
+   * and can actually start. Falls back to the last completed one once a whole
+   * city is done, so the character is always somewhere rather than vanishing
+   * at the end.
+   */
+  const currentLevelId = (() => {
+    const next = city.levels.find(
+      (level) =>
+        !isLevelComplete(cityId, level.id) &&
+        level.status === 'playable' &&
+        isLevelUnlocked(cityId, level.id),
+    );
+    if (next) return next.id;
+    const done = [...city.levels].reverse().find((level) => isLevelComplete(cityId, level.id));
+    return done?.id ?? city.levels[0]?.id;
+  })();
 
   const showToast = (message: string) => {
     sfx.play('retry');
@@ -139,15 +162,23 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
     const playable = level.status === 'playable' && unlocked;
     const state = complete ? 'is-complete' : playable ? 'is-playable' : 'is-locked';
     const reward = level.rewardVehicleId ? VEHICLES[level.rewardVehicleId] : null;
-    const badgeText = complete
-      ? reward
-        ? `${reward.icon} Completed`
-        : '⭐ Completed'
-      : playable
-        ? `Level 0${level.index} · Start`
-        : level.status === 'soon'
-          ? 'Coming soon'
-          : 'Locked';
+    // A node renders as an icon plus a label rather than one interpolated
+    // string, so the icon can be real artwork instead of a glyph in the text.
+    const badgeText = complete ? (
+      <>
+        <Icon name={reward ? reward.icon : 'star'} size={15} />
+        Completed
+      </>
+    ) : playable ? (
+      `Level 0${level.index} · Start`
+    ) : level.status === 'soon' ? (
+      'Coming soon'
+    ) : (
+      <>
+        <Icon name="lock" size={14} />
+        Locked
+      </>
+    );
     return { complete, playable, state, reward, badgeText };
   };
 
@@ -176,7 +207,20 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
       <p className="city__subtitle">{city.blurb}</p>
 
       {compact ? (
-        <div className="city__list">
+        /*
+          A trail of islands rather than a list of rows.
+
+          The narrow layout used to abandon the island metaphor entirely and
+          become a stack of list items, so the same city looked like a game on a
+          laptop and a settings screen on a phone. This keeps one idea at every
+          width - the world map already stacks its islands into a vertical trail
+          on narrow screens, and this is the same move one level down.
+
+          The student's own character stands on the island they have reached, so
+          progress is something you can see at a glance instead of having to
+          read a badge on each row.
+         */
+        <div className="city__trail">
           {(city.chapters ?? [null]).map((chapter) => {
             const levelsInChapter = chapter
               ? city.levels.filter((level) => level.chapterId === chapter.id)
@@ -184,40 +228,68 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
             if (levelsInChapter.length === 0) return null;
 
             return (
-              <div className="city__list-group" key={chapter?.id ?? 'all'}>
+              <div className="city__trail-group" key={chapter?.id ?? 'all'}>
                 {chapter && <h2 className="city__list-chapter">{chapter.name}</h2>}
-                {levelsInChapter.map((level, i) => {
-                  const { state, badgeText } = describeLevel(level);
-                  return (
-                    <motion.div
-                      key={level.id}
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.06 * i + 0.1 }}
-                    >
-                      <DwellTarget onActivate={() => openLevel(level)} dwellMs={900}>
-                        <button
-                          className={`city__list-item ${state}`}
-                          onClick={() => openLevel(level)}
-                          onMouseEnter={() => sfx.play('hover')}
-                        >
-                          <span className="city__list-art">
-                            <Landmark kind={level.landmark} />
-                          </span>
-                          <span className="city__list-body">
-                            <strong>
-                              {level.index}. {level.name}
-                            </strong>
-                            <span className="city__list-tagline">{level.tagline}</span>
-                          </span>
-                          <span className={`map-node__badge ${state === 'is-complete' ? 'is-done' : state === 'is-playable' ? 'is-start' : 'is-soon'}`}>
-                            {badgeText}
-                          </span>
-                        </button>
-                      </DwellTarget>
-                    </motion.div>
-                  );
-                })}
+                <div className="city__trail-islands">
+                  {levelsInChapter.map((level, i) => {
+                    const { state, badgeText } = describeLevel(level);
+                    const isHere = level.id === currentLevelId;
+                    return (
+                      <motion.div
+                        key={level.id}
+                        className={`trail-stop ${i % 2 === 0 ? 'is-left' : 'is-right'}`}
+                        initial={{ opacity: 0, y: 18 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.07 * i + 0.1 }}
+                      >
+                        <DwellTarget onActivate={() => openLevel(level)} dwellMs={900}>
+                          <button
+                            className={`trail-island ${state} ${isHere ? 'is-here' : ''}`}
+                            onClick={() => openLevel(level)}
+                            onMouseEnter={() => sfx.play('hover')}
+                          >
+                            <span className="trail-island__art">
+                              <svg viewBox="0 0 360 300" className="trail-island__base" aria-hidden="true">
+                                <IslandBase
+                                  id={`trail-${level.id}`}
+                                  land={complete0(state) ? '#8ae4a8' : '#6fd88f'}
+                                  landShade={complete0(state) ? '#4cc17f' : '#3fb573'}
+                                  waterfall={false}
+                                />
+                              </svg>
+                              <span className="trail-island__landmark">
+                                <Landmark kind={level.landmark} />
+                              </span>
+                              {isHere && (
+                                <span className="trail-island__avatar" aria-hidden="true">
+                                  <PlayerCharacter size={46} equipped={equippedCosmetics} showPet={false} />
+                                </span>
+                              )}
+                            </span>
+
+                            <span className="trail-island__label">
+                              <strong>
+                                {level.index}. {level.name}
+                              </strong>
+                              <span className="trail-island__tagline">{level.tagline}</span>
+                              <span
+                                className={`map-node__badge ${
+                                  state === 'is-complete'
+                                    ? 'is-done'
+                                    : state === 'is-playable'
+                                      ? 'is-start'
+                                      : 'is-soon'
+                                }`}
+                              >
+                                {badgeText}
+                              </span>
+                            </span>
+                          </button>
+                        </DwellTarget>
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
@@ -272,7 +344,7 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
                     <span className="map-node__art">
                       <Landmark kind={level.landmark} />
                       <span className="map-node__status">
-                        {complete ? '✓' : playable ? '▶' : '🔒'}
+                        {complete ? '✓' : playable ? '▶' : <Icon name="lock" size={13} />}
                       </span>
                     </span>
 
@@ -305,7 +377,8 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
           >
-            🔒 {toast}
+            <Icon name="lock" size={17} />
+            {toast}
           </motion.div>
         )}
       </AnimatePresence>

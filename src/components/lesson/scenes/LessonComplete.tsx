@@ -6,6 +6,7 @@ import { VEHICLES } from '../../../data/vehicles';
 import { CITIES, type CityId } from '../../../data/cities';
 import { DwellTarget } from '../../../tracker/DwellTarget';
 import { Curio } from '../../curio/Curio';
+import { Icon } from '../../icons/Icon';
 import { Confetti } from '../Confetti';
 
 interface RecapRow {
@@ -84,12 +85,16 @@ export function LessonComplete({
           <h1>{title}</h1>
           <p>{blurb}</p>
           {vehicle && (
-            <p style={{ fontWeight: 800, marginTop: 8 }}>
-              {vehicle.icon} New ride unlocked: {vehicle.name}!
+            <p className="complete__reward-line">
+              <Icon name={vehicle.icon} size={22} />
+              New ride unlocked: {vehicle.name}!
             </p>
           )}
           {chapterCompleteNote && (
-            <p style={{ fontWeight: 800, marginTop: 4 }}>🎉 {chapterCompleteNote}</p>
+            <p className="complete__reward-line">
+              <Icon name="sparkle" size={22} />
+              {chapterCompleteNote}
+            </p>
           )}
         </div>
       </div>
@@ -101,7 +106,9 @@ export function LessonComplete({
           animate={{ scale: 1, rotate: 0, opacity: 1 }}
           transition={{ delay: 0.5, type: 'spring', stiffness: 220, damping: 12 }}
         >
-          <span className="complete__badge-icon">{badge.icon}</span>
+          <span className="complete__badge-icon">
+            <Icon name={badge.icon} size={46} />
+          </span>
           <div>
             <strong>{badge.name}</strong>
             <span>New badge earned</span>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { sfx } from '../audio/sound';
 import { Curio } from '../components/curio/Curio';
+import { Icon } from '../components/icons/Icon';
 import { tracker } from './trackerStore';
 import { useTrackerState } from './useTracker';
 import './tracker.css';
@@ -140,15 +141,24 @@ function CameraDiagnostics() {
       </button>
       {open && diag && (
         <ul className="camera-gate__diagnostics-list">
-          <li>{diag.secureContext ? '✅' : '❌'} Secure page (https or localhost)</li>
-          <li>{diag.hasMediaDevices ? '✅' : '❌'} Browser supports camera access</li>
           <li>
-            {diag.permission === 'granted' ? '✅' : diag.permission === 'denied' ? '❌' : '⚠️'} Permission:{' '}
-            {diag.permission} - {PERMISSION_HINT[diag.permission]}
+            <Icon name={diag.secureContext ? 'check' : 'cross'} size={16} />
+            Secure page (https or localhost)
           </li>
           <li>
-            {diag.videoInputs === null ? '⚠️' : diag.videoInputs > 0 ? '✅' : '❌'} Cameras detected:{' '}
-            {diag.videoInputs ?? 'unknown'}
+            <Icon name={diag.hasMediaDevices ? 'check' : 'cross'} size={16} />
+            Browser supports camera access
+          </li>
+          <li>
+            <Icon name={diag.permission === 'granted' ? 'check' : diag.permission === 'denied' ? 'cross' : 'hourglass'} size={16} />
+            Permission: {diag.permission} - {PERMISSION_HINT[diag.permission]}
+          </li>
+          <li>
+            <Icon
+              name={diag.videoInputs === null ? 'hourglass' : diag.videoInputs > 0 ? 'check' : 'cross'}
+              size={16}
+            />
+            Cameras detected: {diag.videoInputs ?? 'unknown'}
             {diag.videoInputs === 0 &&
               ' - check it is plugged in / enabled in your OS settings and not already in use by another app.'}
           </li>
@@ -214,7 +224,7 @@ export function CameraGate({ onDone }: { onDone: () => void }) {
         {phase === 'ask' && (
           <>
             <span className="eyebrow">Curio-City</span>
-            <h2>Hi! I'm Curio 👋</h2>
+            <h2>Hi! I'm Curio</h2>
             <p>
               I am so glad you're here - welcome to Curio-City! I'll be right beside you the whole
               way. This whole world can be played with your <strong>index finger</strong> - point to

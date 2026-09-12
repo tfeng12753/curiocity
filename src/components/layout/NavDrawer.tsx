@@ -4,6 +4,7 @@ import { CITIES, CITY_ORDER } from '../../data/cities';
 import { BADGES, useProgress } from '../../state/progress';
 import { ALL_COSMETICS, SLOT_META, type CosmeticId, type SlotMeta } from '../../data/cosmetics';
 import { PetGlyph, PlayerCharacter } from '../player/PlayerCharacter';
+import { Icon } from '../icons/Icon';
 import { sfx } from '../../audio/sound';
 import type { NavPanel } from './TopNav';
 import './layout.css';
@@ -81,7 +82,9 @@ export function NavDrawer({ panel, onClose }: { panel: NavPanel; onClose: () => 
                 const earned = badges.includes(badge.id);
                 return (
                   <div className={`badge-card ${earned ? 'is-earned' : ''}`} key={badge.id}>
-                    <div className="badge-card__icon">{badge.icon}</div>
+                    <div className="badge-card__icon">
+                      <Icon name={badge.icon} size={44} />
+                    </div>
                     <strong>{badge.name}</strong>
                     <span>{earned ? badge.description : 'Not earned yet'}</span>
                   </div>
@@ -189,16 +192,22 @@ function Wardrobe() {
                     )}
                   </span>
                   <strong>{item.name}</strong>
-                  <span>
-                    {isEquipped
-                      ? 'Equipped'
-                      : owned
-                        ? 'Tap to equip'
-                        : confirming
-                          ? `Buy for 🪙 ${item.coinCost}?`
-                          : affordable
-                            ? `🪙 ${item.coinCost}`
-                            : `🪙 ${item.coinCost} · ${short} to go`}
+                  <span className="cosmetic-card__price">
+                    {isEquipped || owned ? (
+                      isEquipped ? (
+                        'Equipped'
+                      ) : (
+                        'Tap to equip'
+                      )
+                    ) : (
+                      <>
+                        {confirming && 'Buy for'}
+                        <Icon name="coin" size={14} />
+                        {item.coinCost}
+                        {confirming && '?'}
+                        {!confirming && !affordable && ` · ${short} to go`}
+                      </>
+                    )}
                   </span>
                 </button>
               );
@@ -220,7 +229,8 @@ function Wardrobe() {
       <div className="customize__preview">
         <PlayerCharacter size={132} equipped={equippedCosmetics} />
         <span className="pill" title="Coins available">
-          🪙 {coins} coins
+          <Icon name="coin" size={18} />
+          {coins} coins
         </span>
       </div>
 

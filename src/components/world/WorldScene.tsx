@@ -5,6 +5,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useProgress } from '../../state/progress';
 import { sfx } from '../../audio/sound';
 import { DwellTarget } from '../../tracker/DwellTarget';
+import { Icon } from '../icons/Icon';
 import { CITY_ILLUSTRATIONS } from './CityIllustrations';
 import { Cloud } from './IslandBase';
 import './world.css';
@@ -182,8 +183,14 @@ export function WorldScene({ onEnterCity }: WorldSceneProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.9 }}
       >
-        <span className="pill">🗺️ Where do you want to explore?</span>
-        <span className="pill">✋ Playable with your hand or your mouse</span>
+        <span className="pill">
+          <Icon name="map" size={18} />
+          Where do you want to explore?
+        </span>
+        <span className="pill">
+          <Icon name="hand" size={18} />
+          Playable with your hand or your mouse
+        </span>
       </motion.div>
     </motion.div>
   );

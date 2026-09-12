@@ -4,6 +4,7 @@ import { sfx } from '../../../audio/sound';
 import { BADGES, useProgress } from '../../../state/progress';
 import { DwellTarget } from '../../../tracker/DwellTarget';
 import { Curio } from '../../curio/Curio';
+import { Icon } from '../../icons/Icon';
 import { Confetti } from '../Confetti';
 
 const LEARNED = [
@@ -60,7 +61,7 @@ export function SceneComplete({ onReturn, onKeepExploring }: SceneCompleteProps)
           <span className="eyebrow" style={{ color: 'rgba(255,255,255,0.8)' }}>
             You did it!
           </span>
-          <h1>Fraction Adventure Complete! 🎉</h1>
+          <h1>Fraction Adventure Complete!</h1>
           <p>
             Today you learned that a whole can be split into equal parts - and that fractions tell us
             how much of the whole we have.
@@ -74,7 +75,9 @@ export function SceneComplete({ onReturn, onKeepExploring }: SceneCompleteProps)
         animate={{ scale: 1, rotate: 0, opacity: 1 }}
         transition={{ delay: 0.5, type: 'spring', stiffness: 220, damping: 12 }}
       >
-        <span className="complete__badge-icon">{BADGES['fraction-explorer'].icon}</span>
+        <span className="complete__badge-icon">
+          <Icon name={BADGES['fraction-explorer'].icon} size={46} />
+        </span>
         <div>
           <strong>{BADGES['fraction-explorer'].name}</strong>
           <span>New badge earned</span>

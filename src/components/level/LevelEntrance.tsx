@@ -5,6 +5,7 @@ import { VEHICLES } from '../../data/vehicles';
 import { sfx } from '../../audio/sound';
 import { DwellTarget } from '../../tracker/DwellTarget';
 import { Landmark } from '../city/Landmarks';
+import { Icon } from '../icons/Icon';
 import './level.css';
 
 interface LevelEntranceProps {
@@ -77,7 +78,9 @@ export function LevelEntrance({ cityId, levelId, onBack, onStart }: LevelEntranc
 
           {reward && !complete && (
             <p className="entrance__reward">
-              {unlocked ? 'Finish this to unlock:' : 'Reward:'} {reward.icon} {reward.name}
+              {unlocked ? 'Finish this to unlock:' : 'Reward:'}
+              <Icon name={reward.icon} size={20} />
+              {reward.name}
             </p>
           )}
 
@@ -102,7 +105,8 @@ export function LevelEntrance({ cityId, levelId, onBack, onStart }: LevelEntranc
               </DwellTarget>
             ) : (
               <button className="btn btn--lg btn--city" disabled>
-                🔒 Finish {prereq?.name ?? 'the previous lesson'} first
+                <Icon name="lock" size={20} />
+                Finish {prereq?.name ?? 'the previous lesson'} first
               </button>
             )}
             <button className="btn btn--ghost" onClick={onBack}>

@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { CITIES, CITY_ORDER, TOTAL_LEVELS, type CityId } from '../data/cities';
+import type { IconName } from '../components/icons/Icon';
 import type { VehicleId } from '../data/vehicles';
 import {
   COSMETICS,
@@ -23,7 +24,8 @@ export interface BadgeDefinition {
   id: string;
   name: string;
   description: string;
-  icon: string;
+  /** Drawn from the shared icon set - see components/icons/Icon.tsx. */
+  icon: IconName;
 }
 
 export const BADGES: Record<string, BadgeDefinition> = {
@@ -31,31 +33,31 @@ export const BADGES: Record<string, BadgeDefinition> = {
     id: 'fraction-explorer',
     name: 'Fraction Explorer',
     description: 'Finished the Fraction Workshop adventure.',
-    icon: '⭐',
+    icon: 'star',
   },
   'equal-parts-expert': {
     id: 'equal-parts-expert',
     name: 'Equal Parts Expert',
     description: 'Split wholes into perfectly equal parts.',
-    icon: '🍕',
+    icon: 'pizza',
   },
   'whole-to-part-master': {
     id: 'whole-to-part-master',
     name: 'Whole-to-Part Master',
     description: 'Built 1/2, 1/4 and 3/4 in the final challenge.',
-    icon: '🏆',
+    icon: 'trophy',
   },
   'thirds-and-sixths-explorer': {
     id: 'thirds-and-sixths-explorer',
     name: 'Thirds & Sixths Explorer',
     description: 'Split wholes into thirds and sixths, and spotted an equivalent fraction.',
-    icon: '🚗',
+    icon: 'car',
   },
   'fraction-master': {
     id: 'fraction-master',
     name: 'Fraction Master',
     description: 'Aced the fraction challenge and compared fractions like a pro.',
-    icon: '🚀',
+    icon: 'rocket',
   },
 };
 
