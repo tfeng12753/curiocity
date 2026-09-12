@@ -180,7 +180,7 @@
   height: auto;
   display: block;
   overflow: visible;
-  filter: drop-shadow(0 26px 26px rgba(24, 16, 62, 0.22));
+  filter: drop-shadow(0 24px 24px rgba(255, 255, 255, 0.6));
 }
 
 .city-island:hover {
@@ -189,7 +189,7 @@
 }
 
 .city-island:hover .island-svg {
-  filter: drop-shadow(0 30px 34px rgba(24, 16, 62, 0.3)) saturate(1.06);
+  filter: drop-shadow(0 28px 30px rgba(255, 255, 255, 0.75)) saturate(1.06);
 }
 
 .city-island__label {

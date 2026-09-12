@@ -1,4 +1,4 @@
-# Curio City
+# Curio-City
 
 An explorable learning world for 5th–6th graders. Instead of a course catalogue,
 students fly into a world of subject cities, travel a game map, land on a

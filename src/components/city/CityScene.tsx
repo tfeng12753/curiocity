@@ -52,12 +52,31 @@ function CityDecor() {
   );
 }
 
-/** Smooth road through the destinations, drawn in percentage coordinates. */
-function roadThrough(levels: LevelDefinition[], yOffset = 7) {
-  const points = [...levels]
-    .sort((a, b) => a.index - b.index)
-    .map((level) => ({ x: level.x, y: level.y + yOffset }));
-  if (points.length < 2) return '';
+/*
+  Destinations sit in two rows - one above the road, one below - and the road
+  itself runs through the band between them, so the route stays visible
+  instead of being covered by the landmark art sitting on top of it. A
+  level's authored `y` only decides which side of the road it belongs to.
+*/
+const ROW_ABOVE = 20;
+const ROW_BELOW = 80;
+const ROAD_ABOVE = 48;
+const ROAD_BELOW = 52;
+
+const isAboveRoad = (level: LevelDefinition) => level.y < 50;
+const nodeY = (level: LevelDefinition) => (isAboveRoad(level) ? ROW_ABOVE : ROW_BELOW);
+const roadY = (level: LevelDefinition) => (isAboveRoad(level) ? ROAD_ABOVE : ROAD_BELOW);
+
+/** Smooth road running past the destinations, drawn in percentage coordinates. */
+function roadThrough(levels: LevelDefinition[]) {
+  const stops = [...levels].sort((a, b) => a.index - b.index);
+  if (stops.length < 2) return '';
+
+  const points = stops.map((level) => ({ x: level.x, y: roadY(level) }));
+  // Run the route off both edges so it reads as a road passing through town
+  // rather than one that starts and stops at the first and last stop.
+  points.unshift({ x: points[0].x - 14, y: points[0].y });
+  points.push({ x: points[points.length - 1].x + 14, y: points[points.length - 1].y });
 
   let d = `M ${points[0].x} ${points[0].y}`;
   for (let i = 0; i < points.length - 1; i += 1) {
@@ -206,14 +225,14 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
           </svg>
 
           {city.chapters?.map((chapter) => {
-            const first = city.levels.find((level) => level.chapterId === chapter.id);
-            if (!first) return null;
+            const inChapter = city.levels.filter((level) => level.chapterId === chapter.id);
+            if (inChapter.length === 0) return null;
+            // A signpost sitting in the clear band the road runs through,
+            // centred over that chapter's stretch of the route.
+            const midX =
+              inChapter.reduce((sum, level) => sum + level.x, 0) / inChapter.length;
             return (
-              <div
-                key={chapter.id}
-                className="map-chapter-label"
-                style={{ left: `${first.x}%`, top: `${first.y - 16}%` }}
-              >
+              <div key={chapter.id} className="map-chapter-label" style={{ left: `${midX}%`, top: '50%' }}>
                 {chapter.name}
               </div>
             );
@@ -225,8 +244,8 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
             return (
               <motion.div
                 key={level.id}
-                className={`map-node ${state}`}
-                style={{ left: `${level.x}%`, top: `${level.y}%` }}
+                className={`map-node ${state} ${isAboveRoad(level) ? 'is-above-road' : 'is-below-road'}`}
+                style={{ left: `${level.x}%`, top: `${nodeY(level)}%` }}
                 initial={{ opacity: 0, y: 26, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ delay: 0.12 * i + 0.15, type: 'spring', stiffness: 180, damping: 18 }}

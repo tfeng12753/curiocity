@@ -47,7 +47,7 @@ export function NavDrawer({ panel, onClose }: { panel: NavPanel; onClose: () => 
           <>
             <h2>My Progress</h2>
             <p className="drawer__sub">
-              {totalComplete} of {totalLevels} destinations explored across Curio City.
+              {totalComplete} of {totalLevels} destinations explored across Curio-City.
             </p>
             {CITY_ORDER.map((cityId) => {
               const city = CITIES[cityId];

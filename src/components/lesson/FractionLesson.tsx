@@ -199,7 +199,7 @@ export function FractionLesson({ onExit, onKeepExploring }: FractionLessonProps)
             allow={['radial']}
             requiredCuts={1}
             requiredShaded={1}
-            objective="CHALLENGE 1 / 3 · MAKE 1/2"
+            objective="CHALLENGE 1 · MAKE 1/2"
             askLine="Challenge one! Divide the circle into two equal parts and colour one."
             cutInstruction="Split the circle into 2 equal parts."
             shadeInstruction="Colour 1 of the 2 parts."
@@ -222,7 +222,7 @@ export function FractionLesson({ onExit, onKeepExploring }: FractionLessonProps)
             allow={['v', 'h']}
             requiredCuts={2}
             requiredShaded={1}
-            objective="CHALLENGE 2 / 3 · MAKE 1/4"
+            objective="CHALLENGE 2 · MAKE 1/4"
             askLine="Challenge two! Divide the square into four equal parts and colour one."
             cutInstruction="Draw two lines through the middle."
             shadeInstruction="Colour 1 of the 4 parts."
@@ -245,7 +245,7 @@ export function FractionLesson({ onExit, onKeepExploring }: FractionLessonProps)
             allow={['v', 'h']}
             requiredCuts={3}
             requiredShaded={3}
-            objective="CHALLENGE 3 / 3 · MAKE 3/4"
+            objective="CHALLENGE 3 · MAKE 3/4"
             askLine="Last challenge! Divide the bar into four equal parts, then colour three of them."
             cutInstruction="Make 3 cuts for 4 equal parts - across or down, your choice."
             shadeInstruction="Colour 3 of the 4 parts."

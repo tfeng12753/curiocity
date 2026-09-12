@@ -5,7 +5,7 @@
  */
 export function LogoMark({ size = 40 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label="Curio City">
+    <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label="Curio-City">
       {/* floating sparkles */}
       <g fill="#ffc24a">
         <path d="M20 20 l2.6 6.4 6.4 2.6 -6.4 2.6 -2.6 6.4 -2.6 -6.4 -6.4 -2.6 6.4 -2.6 Z" opacity="0.9" />
@@ -50,7 +50,7 @@ interface LogoProps {
   size?: number;
 }
 
-/** The full lockup: mark plus the two-tone "Curio City" wordmark. */
+/** The full lockup: mark plus the two-tone "Curio-City" wordmark. */
 export function Logo({ orientation = 'horizontal', size = 32 }: LogoProps) {
   if (orientation === 'stacked') {
     return (
@@ -68,7 +68,7 @@ export function Logo({ orientation = 'horizontal', size = 32 }: LogoProps) {
     <span className="logo logo--horizontal">
       <LogoMark size={size} />
       <span className="logo__word">
-        <span className="logo__curio">Curio</span>
+        <span className="logo__curio">Curio-</span>
         <span className="logo__city">City</span>
       </span>
     </span>

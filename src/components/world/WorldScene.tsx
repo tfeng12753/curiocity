@@ -93,9 +93,8 @@ export function WorldScene({ onEnterCity }: WorldSceneProps) {
       <div className="world__sea" />
 
       <div className="world__hero">
-        <span className="eyebrow">Curio City</span>
+        <span className="eyebrow">Curio-City</span>
         <h1>Enter your learning world</h1>
-        <p>Explore new worlds. Discover new ideas. Learn by doing.</p>
       </div>
 
       <div className="world__stage">

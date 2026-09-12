@@ -1,5 +1,5 @@
 /*
-  Curio City design tokens.
+  Curio-City design tokens.
 
   One base UI (ink text, white floating panels, soft shadows, big rounding) shared
   across the whole product; each city then overrides --city-* to carry its own

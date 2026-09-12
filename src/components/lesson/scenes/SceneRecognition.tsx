@@ -24,13 +24,13 @@ const OPTIONS: Option[] = [
     caption: 'Circle',
   },
   {
-    id: 'two-fourths',
+    id: 'three-fourths',
     kind: 'square',
     cuts: [
       { axis: 'v', t: 0.5 },
       { axis: 'h', t: 0.5 },
     ],
-    shaded: ['r0c0', 'r0c1'],
+    shaded: ['r0c0', 'r0c1', 'r1c0'],
     caption: 'Square',
   },
   {
@@ -55,10 +55,10 @@ const ROUNDS = [
     success: 'Yes! One of the two equal parts is coloured. That is 1/2.',
   },
   {
-    answer: 'two-fourths',
-    objective: 'FIND 2/4',
-    ask: 'Great. Now find two-fourths - two out of four equal parts.',
-    success: 'Perfect! Two of the four equal parts is 2/4.',
+    answer: 'three-fourths',
+    objective: 'FIND 3/4',
+    ask: 'Great. Now find three-fourths - three out of four equal parts.',
+    success: 'Perfect! Three of the four equal parts is 3/4.',
   },
 ];
 

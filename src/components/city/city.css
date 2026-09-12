@@ -89,6 +89,9 @@
 }
 
 .city__stamp {
+  /* The HUD already shows "Your progress: x / y", and the bottom-left corner
+     is now where the below-road destination row lives. */
+  display: none;
   position: absolute;
   left: 26px;
   bottom: 26px;
@@ -217,6 +220,35 @@
   padding: 6px 10px;
 }
 
+/* The two destination rows sit either side of the road band, so on a short
+   window the landmark art has to come down with them or it grows back over
+   the route it is supposed to be standing beside. */
+@media (max-height: 900px) {
+  .map-node__art {
+    width: 140px;
+    height: 146px;
+  }
+  .map-node__art .landmark {
+    width: 138px;
+    height: 158px;
+  }
+}
+
+@media (max-height: 740px) {
+  .map-node__art {
+    width: 112px;
+    height: 116px;
+  }
+  .map-node__art .landmark {
+    width: 110px;
+    height: 126px;
+  }
+  .map-node__pill {
+    font-size: 0.74rem;
+    padding: 5px 12px 5px 5px;
+  }
+}
+
 @media (max-width: 900px) {
   .city {
     overflow-y: auto;
@@ -314,7 +346,7 @@
 
 .map-chapter-label {
   position: absolute;
-  transform: translate(-50%, 0);
+  transform: translate(-50%, -50%);
   white-space: nowrap;
   padding: 5px 14px;
   border-radius: var(--r-pill);
@@ -334,7 +366,11 @@
 
 .map-node {
   position: absolute;
-  transform: translate(-50%, -50%);
+  /* The standalone `translate` property, not `transform`: these nodes are
+     motion.div's, and framer-motion writes its own inline `transform`,
+     which would otherwise wipe out the centering and leave every node
+     hanging off the bottom-right of its coordinate. */
+  translate: -50% -50%;
   width: 210px;
   display: flex;
   flex-direction: column;

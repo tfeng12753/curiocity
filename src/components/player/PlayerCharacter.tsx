@@ -13,7 +13,7 @@ export interface PlayerCharacterProps {
 
 /**
  * The player's own character - one base body with swappable colour/hat/
- * accessory cosmetics. Shares its visual family with the CurioCity logo
+ * accessory cosmetics. Shares its visual family with the Curio-City logo
  * mark (rounded body, big curious eyes) so it reads as the same world.
  */
 export function PlayerCharacter({ size = 96, equipped }: PlayerCharacterProps) {
