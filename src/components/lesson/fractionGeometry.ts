@@ -43,7 +43,7 @@ export const SHAPE_METRICS: Record<ShapeKind, ShapeMetrics> = {
 const CIRCLE = { cx: 50, cy: 50, r: 44 };
 const RECT_INSET = 4;
 
-export function foldAngle(angle: number) {
+function foldAngle(angle: number) {
   let a = angle % Math.PI;
   if (a < 0) a += Math.PI;
   return a;
@@ -255,8 +255,4 @@ export function cutGuideLine(kind: ShapeKind, cut: Cut) {
   }
   const y = RECT_INSET + cut.t * (height - RECT_INSET * 2);
   return { x1: RECT_INSET, y1: y, x2: width - RECT_INSET, y2: y };
-}
-
-export function describeFraction(shadedCount: number, total: number) {
-  return `${shadedCount}/${total}`;
 }
