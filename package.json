@@ -11,7 +11,7 @@
   "license": "ISC",
   "scripts": {
     "dev": "npm run sync:wasm && vite",
-    "dev:server": "node --env-file=server/.env server/index.mjs",
+    "dev:server": "node server/index.mjs",
     "build": "npm run sync:wasm && tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

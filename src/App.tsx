@@ -2,6 +2,8 @@ import { useCallback, useState, type ComponentType } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { ProgressProvider } from './state/progress';
 import { RoleProvider, useRole } from './state/role';
+import { ClassroomProvider, useClassroom } from './state/classroom';
+import { AuthProvider, useAuth } from './state/auth';
 import type { CityId } from './data/cities';
 import { WorldScene } from './components/world/WorldScene';
 import { CityScene } from './components/city/CityScene';
@@ -12,10 +14,13 @@ import { FractionLesson3 } from './components/lesson/FractionLesson3';
 import { TopNav, type NavPanel } from './components/layout/TopNav';
 import { NavDrawer } from './components/layout/NavDrawer';
 import { TeacherDashboard } from './components/teacher/TeacherDashboard';
+import { ModeGate } from './components/mode/ModeGate';
+import { StudentPicker } from './components/mode/StudentPicker';
 import { FingerCursor } from './tracker/FingerCursor';
 import { CameraGate } from './tracker/CameraGate';
 import { TrackerModeControl } from './tracker/TrackerModeControl';
 import { useTrackerState } from './tracker/useTracker';
+import './components/mode/mode.css';
 
 interface LessonProps {
   onExit: () => void;
@@ -37,26 +42,103 @@ type View =
 
 export function App() {
   return (
-    <ProgressProvider>
-      <RoleProvider>
-        <AppShell />
-      </RoleProvider>
-    </ProgressProvider>
+    <AuthProvider>
+      <ClassroomProvider>
+        <RoleProvider>
+          <AppShell />
+        </RoleProvider>
+      </ClassroomProvider>
+    </AuthProvider>
   );
 }
 
 function AppShell() {
+  const { role, setRole } = useRole();
+  const { activeStudent } = useClassroom();
+  const { user, token, ready, logout } = useAuth();
+  const [playing, setPlaying] = useState(role === 'student' && Boolean(activeStudent));
+
+  const leave = useCallback(() => {
+    setPlaying(false);
+    setRole('choose');
+    void logout();
+  }, [setRole, logout]);
+
+  if (!ready) {
+    return (
+      <div className="app">
+        <div className="mode-gate">
+          <p className="mode-gate__warn">Signing you in…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (user?.role === 'teacher') {
+    return (
+      <div className="app">
+        <TeacherDashboard onLeave={leave} />
+      </div>
+    );
+  }
+
+  if (user?.role === 'student') {
+    return (
+      <ProgressProvider key={user.id} studentId={user.id} remoteToken={token}>
+        <StudentWorld onLeave={leave} />
+      </ProgressProvider>
+    );
+  }
+
+  if (role === 'choose') {
+    return (
+      <div className="app">
+        <ModeGate
+          onLocalChoose={(next) => {
+            setPlaying(false);
+            setRole(next);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (role === 'teacher') {
+    return (
+      <div className="app">
+        <TeacherDashboard onLeave={leave} />
+      </div>
+    );
+  }
+
+  if (!playing) {
+    return (
+      <div className="app">
+        <StudentPicker onPicked={() => setPlaying(true)} onBack={leave} />
+      </div>
+    );
+  }
+
+  if (!activeStudent) {
+    return (
+      <div className="app">
+        <StudentPicker onPicked={() => setPlaying(true)} onBack={leave} />
+      </div>
+    );
+  }
+
+  return (
+    <ProgressProvider key={activeStudent.id} studentId={activeStudent.id}>
+      <StudentWorld onLeave={leave} />
+    </ProgressProvider>
+  );
+}
+
+function StudentWorld({ onLeave }: { onLeave: () => void }) {
   const [view, setView] = useState<View>({ name: 'world' });
   const [panel, setPanel] = useState<NavPanel>(null);
-  const { role, setRole } = useRole();
   const { onboarded } = useTrackerState();
-  const teacherMode = role === 'teacher';
 
-  // Camera/hand mode, once chosen, now follows the student around the whole
-  // site instead of being reset back to pointer on every navigation - this
-  // used to force pointer mode on every world/city visit, which is exactly
-  // why hand tracking felt lesson-only rather than something the rest of
-  // the site could be played with too.
   const goWorld = useCallback(() => {
     setPanel(null);
     setView({ name: 'world' });
@@ -67,27 +149,14 @@ function AppShell() {
     setView({ name: 'city', cityId });
   }, []);
 
-  const goTeacher = useCallback(() => {
-    setPanel(null);
-    setRole('teacher');
-  }, [setRole]);
-
-  const goStudent = useCallback(() => {
-    setPanel(null);
-    setRole('student');
-    setView({ name: 'world' });
-  }, [setRole]);
-
   const cityId = 'cityId' in view ? view.cityId : undefined;
 
   return (
-    <div className="app" data-city={teacherMode ? undefined : cityId}>
+    <div className="app" data-city={cityId}>
       <AnimatePresence mode="wait">
-        {teacherMode && <TeacherDashboard key="teacher" />}
+        {view.name === 'world' && <WorldScene key="world" onEnterCity={goCity} />}
 
-        {!teacherMode && view.name === 'world' && <WorldScene key="world" onEnterCity={goCity} />}
-
-        {!teacherMode && view.name === 'city' && (
+        {view.name === 'city' && (
           <CityScene
             key={`city-${view.cityId}`}
             cityId={view.cityId}
@@ -96,7 +165,7 @@ function AppShell() {
           />
         )}
 
-        {!teacherMode && view.name === 'entrance' && (
+        {view.name === 'entrance' && (
           <LevelEntrance
             key={`entrance-${view.levelId}`}
             cityId={view.cityId}
@@ -106,39 +175,25 @@ function AppShell() {
           />
         )}
 
-        {!teacherMode &&
-          view.name === 'lesson' &&
+        {view.name === 'lesson' &&
           (() => {
             const Lesson = LESSON_COMPONENTS[view.levelId] ?? FractionLesson;
             return <Lesson key="lesson" onExit={() => goCity(view.cityId)} onKeepExploring={goWorld} />;
           })()}
       </AnimatePresence>
 
-      {(teacherMode || view.name !== 'lesson') && (
-        <TopNav
-          onHome={teacherMode ? goStudent : goWorld}
-          openPanel={panel}
-          onOpenPanel={setPanel}
-          teacherMode={teacherMode}
-          onTeacher={goTeacher}
-          onStudent={goStudent}
-        />
+      {view.name !== 'lesson' && (
+        <TopNav onHome={goWorld} openPanel={panel} onOpenPanel={setPanel} onLeave={onLeave} />
       )}
 
       <AnimatePresence>
-        {!teacherMode && panel && <NavDrawer key={panel} panel={panel} onClose={() => setPanel(null)} />}
+        {panel && <NavDrawer key={panel} panel={panel} onClose={() => setPanel(null)} />}
       </AnimatePresence>
 
-      {/* The character cursor and its mode toggle live at the app root, not
-          inside any one screen, so hand-tracking (once taught) works the
-          same way on the world map, a city, an entrance screen, or a
-          lesson - not just lessons. */}
-      {!teacherMode && <FingerCursor active={onboarded} />}
-      {!teacherMode && view.name !== 'lesson' && <TrackerModeControl className="tracker-mode--floating" />}
+      <FingerCursor active={onboarded} />
+      {view.name !== 'lesson' && <TrackerModeControl className="tracker-mode--floating" />}
 
-      <AnimatePresence>
-        {!teacherMode && !onboarded && <CameraGate key="onboarding" onDone={() => {}} />}
-      </AnimatePresence>
+      <AnimatePresence>{!onboarded && <CameraGate key="onboarding" onDone={() => {}} />}</AnimatePresence>
     </div>
   );
 }

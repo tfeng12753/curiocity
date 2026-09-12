@@ -1,21 +1,23 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
-export type Role = 'student' | 'teacher';
+export type Role = 'choose' | 'student' | 'teacher';
 
 interface RoleContextValue {
   role: Role;
   setRole: (role: Role) => void;
 }
 
-const STORAGE_KEY = 'learnverse.role.v1';
+const STORAGE_KEY = 'learnverse.role.v2';
 const RoleContext = createContext<RoleContextValue | null>(null);
 
 function loadRole(): Role {
   try {
-    return localStorage.getItem(STORAGE_KEY) === 'teacher' ? 'teacher' : 'student';
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === 'teacher' || stored === 'student' || stored === 'choose') return stored;
   } catch {
-    return 'student';
+    /* ignore */
   }
+  return 'choose';
 }
 
 export function RoleProvider({ children }: { children: ReactNode }) {

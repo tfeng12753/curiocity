@@ -2,10 +2,38 @@
   position: absolute;
   inset: 0;
   overflow: auto;
-  padding: 96px 28px 48px;
+  padding: 28px 28px 48px;
   background:
     radial-gradient(ellipse at 20% 0%, rgba(255, 255, 255, 0.35), transparent 50%),
     linear-gradient(180deg, #d8ecff 0%, #eef2ff 42%, #f7f4ff 100%);
+}
+
+.teacher__nav {
+  width: min(920px, 100%);
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.teacher__leave,
+.teacher__back {
+  margin-left: auto;
+  border: none;
+  background: var(--violet-600);
+  color: #fff;
+  border-radius: var(--r-pill);
+  padding: 9px 16px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.teacher__back {
+  margin: 0 0 4px;
+  width: fit-content;
+  background: var(--violet-050);
+  color: var(--violet-700);
 }
 
 .teacher__inner {
@@ -26,6 +54,19 @@
 .teacher__hero h1 {
   font-size: clamp(1.8rem, 3vw, 2.4rem);
   margin-bottom: 8px;
+}
+
+.teacher__code {
+  margin-top: 18px;
+  display: inline-flex;
+  letter-spacing: 0.28em;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  padding: 10px 22px 10px 28px;
+  border-radius: var(--r-lg);
+  background: var(--violet-050);
+  color: var(--violet-700);
 }
 
 .teacher__hero p {
@@ -123,6 +164,84 @@
   color: var(--ink-soft);
   font-weight: 600;
   font-size: 0.92rem;
+}
+
+.teacher__roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.teacher__roster > li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.teacher__roster-card {
+  display: grid;
+  gap: 8px;
+  text-align: left;
+  padding: 18px 20px;
+  border: none;
+  border-radius: var(--r-lg);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  color: inherit;
+}
+
+.teacher__roster-card strong {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.teacher__roster-card span {
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.teacher__remove {
+  border: none;
+  border-radius: var(--r-lg);
+  background: var(--violet-050);
+  color: var(--ink-soft);
+  font-weight: 800;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.teacher__empty,
+.teacher__add {
+  padding: 20px 22px;
+}
+
+.teacher__add label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.teacher__add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.teacher__add-row input {
+  flex: 1;
+  border: 2px solid var(--violet-200);
+  border-radius: var(--r-pill);
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 700;
 }
 
 .teacher__reset.is-confirming {

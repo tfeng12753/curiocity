@@ -2,4 +2,6 @@
 node_modules
 dist
 public/mediapipe
+.env
 server/.env
+server/data/

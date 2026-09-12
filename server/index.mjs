@@ -5,6 +5,7 @@
   check for Render.
 */
 import { createServer } from 'node:http';
+import { handleAccountRequest } from './accounts.mjs';
 
 const PORT = process.env.PORT ?? 8787;
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
@@ -138,8 +139,8 @@ async function fetchHint({ objective, instruction, mistakeCount }) {
 
 function withCors(res) {
   res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'content-type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type, authorization');
 }
 
 function readJsonBody(req) {
@@ -147,7 +148,7 @@ function readJsonBody(req) {
     let body = '';
     req.on('data', (chunk) => {
       body += chunk;
-      if (body.length > 10_000) req.destroy(new Error('Body too large'));
+      if (body.length > 80_000) req.destroy(new Error('Body too large'));
     });
     req.on('end', () => {
       try {
@@ -170,6 +171,16 @@ const server = createServer(async (req, res) => {
 
   if (req.method === 'GET' && req.url === '/healthz') {
     res.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
+    return;
+  }
+
+  try {
+    if (await handleAccountRequest(req, res, readJsonBody)) return;
+  } catch (error) {
+    console.error('[accounts] failed:', error.message);
+    res.writeHead(400, { 'content-type': 'application/json' }).end(
+      JSON.stringify({ error: error.message || 'Account request failed' }),
+    );
     return;
   }
 
@@ -259,6 +270,7 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[server] listening on :${PORT}`);
+  console.log('[server] accounts stored in server/data/accounts.json');
   if (!ELEVENLABS_API_KEY) console.warn('[server] ELEVENLABS_API_KEY is not set - /api/speak will return 503');
   if (!IFM_API_KEY) console.warn('[server] IFM_API_KEY is not set - /api/hint will return 503');
 });

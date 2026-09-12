@@ -18,6 +18,7 @@ import {
   type CosmeticId,
   type CosmeticSlot,
 } from '../data/cosmetics';
+import { fetchRemoteProgress, saveRemoteProgress } from '../api';
 
 export interface BadgeDefinition {
   id: string;
@@ -59,7 +60,7 @@ export const BADGES: Record<string, BadgeDefinition> = {
   },
 };
 
-interface ProgressState {
+export interface ProgressState {
   completed: string[];
   badges: string[];
   coins: number;
@@ -86,6 +87,10 @@ interface ProgressContextValue extends ProgressState {
 
 const STORAGE_KEY = 'learnverse.progress.v1';
 const ProgressContext = createContext<ProgressContextValue | null>(null);
+
+export function progressStorageKey(studentId: string) {
+  return studentId === 'legacy' ? STORAGE_KEY : `${STORAGE_KEY}:${studentId}`;
+}
 
 function freshState(): ProgressState {
   return {
@@ -133,39 +138,108 @@ function sanitizeEquipped(
   return equipped;
 }
 
-function load(): ProgressState {
+export function normalizeProgress(parsed: unknown): ProgressState {
+  const data = parsed && typeof parsed === 'object' ? (parsed as Partial<ProgressState>) : {};
+  const unlockedCosmetics = sanitizeUnlocked(data.unlockedCosmetics);
+  return {
+    completed: Array.isArray(data.completed) ? data.completed : [],
+    badges: Array.isArray(data.badges) ? data.badges : [],
+    coins: typeof data.coins === 'number' ? data.coins : 0,
+    unlockedVehicles: Array.isArray(data.unlockedVehicles) ? data.unlockedVehicles : [],
+    unlockedCosmetics,
+    equippedCosmetics: sanitizeEquipped(data.equippedCosmetics, unlockedCosmetics),
+  };
+}
+
+export function loadProgress(studentId: string): ProgressState {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(progressStorageKey(studentId));
     if (!raw) return freshState();
-    const parsed = JSON.parse(raw) as Partial<ProgressState>;
-    const unlockedCosmetics = sanitizeUnlocked(parsed.unlockedCosmetics);
-    return {
-      completed: Array.isArray(parsed.completed) ? parsed.completed : [],
-      badges: Array.isArray(parsed.badges) ? parsed.badges : [],
-      // All new to this version of the schema - older saved progress simply
-      // won't have them yet, so they default in rather than wiping anything.
-      coins: typeof parsed.coins === 'number' ? parsed.coins : 0,
-      unlockedVehicles: Array.isArray(parsed.unlockedVehicles) ? parsed.unlockedVehicles : [],
-      unlockedCosmetics,
-      equippedCosmetics: sanitizeEquipped(parsed.equippedCosmetics, unlockedCosmetics),
-    };
+    return normalizeProgress(JSON.parse(raw));
   } catch {
     return freshState();
   }
 }
 
+export function saveProgress(studentId: string, state: ProgressState) {
+  try {
+    localStorage.setItem(progressStorageKey(studentId), JSON.stringify(state));
+  } catch {
+    /* progress is session-nice-to-have, not critical */
+  }
+}
+
+export function clearProgress(studentId: string) {
+  saveProgress(studentId, freshState());
+}
+
+/** Read-only snapshot so the teacher view can inspect a student without becoming them. */
+export function describeProgress(state: ProgressState) {
+  const isLevelComplete = (cityId: CityId, levelId: string) =>
+    state.completed.includes(key(cityId, levelId));
+
+  const isLevelUnlocked = (cityId: CityId, levelId: string) => {
+    const level = CITIES[cityId].levels.find((entry) => entry.id === levelId);
+    return !level?.requiresLevelId || isLevelComplete(cityId, level.requiresLevelId);
+  };
+
+  return {
+    ...state,
+    isLevelComplete,
+    isLevelUnlocked,
+    cityProgress: (cityId: CityId) => ({
+      done: CITIES[cityId].levels.filter((level) => isLevelComplete(cityId, level.id)).length,
+      total: CITIES[cityId].levels.length,
+    }),
+    totalComplete: CITY_ORDER.reduce(
+      (sum, cityId) =>
+        sum + CITIES[cityId].levels.filter((level) => isLevelComplete(cityId, level.id)).length,
+      0,
+    ),
+    totalLevels: TOTAL_LEVELS,
+  };
+}
+
 const key = (cityId: CityId, levelId: string) => `${cityId}/${levelId}`;
 
-export function ProgressProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<ProgressState>(load);
+export function ProgressProvider({
+  studentId,
+  remoteToken = null,
+  children,
+}: {
+  studentId: string;
+  remoteToken?: string | null;
+  children: ReactNode;
+}) {
+  const [state, setState] = useState<ProgressState>(() => loadProgress(studentId));
+  const [remoteReady, setRemoteReady] = useState(!remoteToken);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      /* progress is session-nice-to-have, not critical */
+    if (!remoteToken) {
+      setRemoteReady(true);
+      return;
     }
-  }, [state]);
+    let cancelled = false;
+    fetchRemoteProgress(remoteToken)
+      .then((data) => {
+        if (cancelled) return;
+        setState(normalizeProgress(data.progress));
+        setRemoteReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) setRemoteReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [remoteToken]);
+
+  useEffect(() => {
+    saveProgress(studentId, state);
+    if (remoteToken && remoteReady) {
+      saveRemoteProgress(remoteToken, state).catch(() => undefined);
+    }
+  }, [studentId, state, remoteToken, remoteReady]);
 
   const completeLevel = useCallback((cityId: CityId, levelId: string) => {
     setState((prev) => {
