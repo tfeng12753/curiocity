@@ -111,7 +111,7 @@ export function FractionLesson2({ onExit, onKeepExploring }: FractionLesson2Prop
             cityId="math"
             levelId="fractions-2"
             badgeId="thirds-and-sixths-explorer"
-            title="Thirds & Sixths Complete! 🎉"
+            title="Thirds & Sixths Complete!"
             blurb="You split wholes into thirds and sixths, and discovered that 2/6 and 1/3 are the same amount."
             learned={['Thirds', 'Sixths', 'Equivalent fractions (2/6 = 1/3)', 'Cutting a shape twice as fine']}
             recap={[

@@ -1,6 +1,7 @@
 import { sfx } from '../audio/sound';
 import { tracker } from './trackerStore';
 import { useTrackerState } from './useTracker';
+import { Icon } from '../components/icons/Icon';
 
 interface TrackerModeControlProps {
   /** Lets a host (e.g. the lesson HUD) lay this out inline instead of as a
@@ -33,7 +34,10 @@ export function TrackerModeControl({ className }: TrackerModeControlProps) {
   return (
     <div className={`tracker-mode ${className ?? ''}`}>
       <div className="tracker-mode__row">
-        <span className="pill">{active ? '✋ Finger' : status === 'starting' ? '⏳ Starting' : '🖱️ Pointer'} mode</span>
+        <span className="pill">
+          <Icon name={active ? 'hand' : status === 'starting' ? 'hourglass' : 'mouse'} size={17} />
+          {active ? 'Finger' : status === 'starting' ? 'Starting' : 'Pointer'} mode
+        </span>
         {active ? (
           <button className="btn btn--ghost btn--sm" onClick={backToPointer}>
             Use pointer

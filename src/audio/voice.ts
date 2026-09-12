@@ -1,18 +1,47 @@
 /*
-  Curio's narration, with two tiers so she is never silent:
+  Curio's narration, with three tiers so she is never silent:
 
-    1. ElevenLabs, via the server/ proxy, when an API key is configured -
+    1. This browser's own cache of lines it has already heard (audioCache.ts)
+       - instant, free, and survives reloads and server restarts.
+    2. ElevenLabs, via the server/ proxy, when an API key is configured -
        real character voice, with true amplitude for lip-sync.
-    2. The browser's built-in speech synthesis otherwise - no key, no
+    3. The browser's built-in speech synthesis otherwise - no key, no
        network, no cost. Lip-sync is approximated since there is no audio
        stream to analyse.
 
   Mirrors sound.ts: small, and never allowed to break a lesson if it fails.
 */
 import { sfx } from './sound';
+import { speakable } from './speakable';
+import { readCachedClip, writeCachedClip } from './audioCache';
+import { settings } from '../state/settings';
 
 const ENDPOINT = (import.meta.env.VITE_API_ENDPOINT ?? '/api').replace(/\/$/, '');
 const CACHE_LIMIT = 40;
+
+/*
+  Narration is the biggest consumer of the ElevenLabs quota by far - every
+  dialogue line in every lesson is a request, and the server's cache is lost
+  whenever a free-tier instance spins down. This caps how many *new* lines one
+  visit can synthesise; repeats still come from the cache below and cost
+  nothing. Past the cap Curio keeps talking in the browser's own voice rather
+  than going silent.
+*/
+const SYNTH_BUDGET = 40;
+let synthesised = 0;
+
+/*
+  Deliberately 1: resampling to fake a higher pitch drags the formants up with
+  it, which is the "munchkin" sound - it reads as a processed adult rather than
+  as a child, and it was worse than the voice it replaced. Curio's youth comes
+  from choosing a voice that is genuinely young and from how she is written,
+  not from a playback trick.
+
+  Left in place because it is the one knob that also affects audio already in
+  the cache, which makes it the cheapest thing to try if she ever needs a
+  nudge. Small steps: past about 1.05 the artefacts start to show.
+*/
+const EXCITEMENT_RATE = 1;
 
 /**
  * Falling back to browser speech is meant to be graceful, not invisible. It was
@@ -150,8 +179,10 @@ function speakWithBrowser(text: string, onAmplitude?: (level: number) => void, o
   if (voice) utterance.voice = voice;
   // A touch quicker and brighter than neutral - reads as upbeat rather than
   // instructional, without tipping into cartoonish.
+  // SpeechSynthesis has a real pitch control (0-2), so no playback trick
+  // is needed here - just ask for the same bright, childlike register.
   utterance.rate = 1.02;
-  utterance.pitch = 1.25;
+  utterance.pitch = 1.3;
 
   // There is no audio stream to measure here, so the mouth is driven by a
   // burbling oscillation for as long as she is talking - close enough to
@@ -191,6 +222,22 @@ async function fetchSpeechUrl(text: string, voiceId: string | undefined, control
   const cached = blobCache.get(key);
   if (cached) return cached;
 
+  // Disk before network, and before the budget: a line this browser has heard
+  // before is free, so replaying a lesson must not spend a paid request or
+  // count against the visit's allowance.
+  const stored = await readCachedClip(key);
+  if (stored) {
+    const storedUrl = URL.createObjectURL(stored);
+    cacheBlobUrl(key, storedUrl);
+    return storedUrl;
+  }
+
+  if (synthesised >= SYNTH_BUDGET) {
+    warnFallback(`narration budget of ${SYNTH_BUDGET} new lines used up for this visit`);
+    return null;
+  }
+  synthesised += 1;
+
   const response = await fetch(`${ENDPOINT}/speak`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -215,6 +262,10 @@ async function fetchSpeechUrl(text: string, voiceId: string | undefined, control
     return null;
   }
 
+  // Only written once the blob has been checked as real audio above, so a
+  // misconfigured proxy can never persist index.html as a lesson line.
+  void writeCachedClip(key, blob);
+
   const url = URL.createObjectURL(blob);
   cacheBlobUrl(key, url);
   return url;
@@ -223,6 +274,17 @@ async function fetchSpeechUrl(text: string, voiceId: string | undefined, control
 async function playUrl(url: string, onAmplitude?: (level: number) => void, onEnd?: () => void) {
   const audioEl = new Audio(url);
   currentAudio = audioEl;
+
+  if (EXCITEMENT_RATE !== 1) {
+    // Browsers preserve pitch across a rate change by default; turning that
+    // off is what makes rate shift pitch at all. Safari spelled the property
+    // differently for years, hence both.
+    type PitchyAudio = HTMLAudioElement & { preservesPitch?: boolean; webkitPreservesPitch?: boolean };
+    const pitchy = audioEl as PitchyAudio;
+    pitchy.preservesPitch = false;
+    pitchy.webkitPreservesPitch = false;
+    audioEl.playbackRate = EXCITEMENT_RATE;
+  }
   audioEl.onended = () => {
     onAmplitude?.(0);
     onEnd?.();
@@ -245,10 +307,23 @@ async function playUrl(url: string, onAmplitude?: (level: number) => void, onEnd
 }
 
 export const voice = {
-  async speak(text: string, { voiceId, onAmplitude, onEnd }: SpeakOptions = {}) {
+  async speak(rawText: string, { voiceId, onAmplitude, onEnd }: SpeakOptions = {}) {
     stopPlayback();
-    if (sfx.isMuted() || !text.trim()) {
+    const mode = settings.voiceMode();
+    if (sfx.isMuted() || mode === 'off' || !rawText.trim()) {
+      // onEnd still fires: scenes that wait for Curio to finish speaking must
+      // advance normally when she is switched off, or the lesson stalls.
       onEnd?.();
+      return;
+    }
+
+    // Everything past this point works on the spoken form, so the cache keys,
+    // the ElevenLabs request and the browser fallback all agree on one string
+    // - and "1/2" is never read out as "one slash two".
+    const text = speakable(rawText);
+
+    if (mode === 'browser') {
+      speakWithBrowser(text, onAmplitude, onEnd);
       return;
     }
 

@@ -142,7 +142,7 @@
   border-radius: var(--r-pill);
   background: rgba(15, 10, 40, 0.72);
   color: #fff;
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -181,7 +181,7 @@
 .camera-gate__card {
   width: min(560px, 100%);
   background: #fff;
-  border-radius: var(--r-xl);
+  border-radius: var(--r-panel);
   padding: 38px 40px 34px;
   text-align: center;
   box-shadow: var(--shadow-lg);
@@ -194,7 +194,7 @@
 
 .camera-gate__card p {
   color: var(--ink-soft);
-  font-size: 1.05rem;
+  font-size: var(--text-base);
   font-weight: 600;
 }
 
@@ -222,6 +222,8 @@
 .camera-gate__actions {
   display: flex;
   gap: 12px;
+  /* Matched heights - see the note on .entrance__actions. */
+  align-items: stretch;
   justify-content: center;
   flex-wrap: wrap;
   margin-top: 26px;
@@ -229,7 +231,7 @@
 
 .camera-gate__note {
   margin-top: 18px;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--ink-faint);
   font-weight: 700;
 }
@@ -241,7 +243,7 @@
   background: var(--nudge-soft);
   color: #8a5a00;
   font-weight: 700;
-  font-size: 0.92rem;
+  font-size: var(--text-md);
 }
 
 .camera-gate__diagnostics {
@@ -256,7 +258,7 @@
   padding: 6px 0;
   font-family: var(--font-body);
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   color: var(--ink-faint);
   text-decoration: underline;
   cursor: pointer;
@@ -272,7 +274,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--ink-soft);
 }
@@ -285,7 +287,7 @@
   padding: 4px 10px;
   font-family: var(--font-body);
   font-weight: 700;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   color: var(--violet-600);
   cursor: pointer;
 }
@@ -363,7 +365,7 @@
 .tracker-mode__error {
   max-width: 220px;
   text-align: right;
-  font-size: 0.72rem;
+  font-size: var(--text-2xs);
   font-weight: 700;
   color: #8a5a00;
   background: var(--nudge-soft);
@@ -428,4 +430,135 @@
     width: 76px;
     height: auto;
   }
+}
+
+/* ------------------------------------------------------- camera settings */
+
+.camera-settings__status {
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  background: var(--violet-050);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.camera-settings__status--on {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.camera-settings__status--starting {
+  background: var(--nudge-soft);
+  color: var(--nudge);
+}
+
+.camera-settings__status--error {
+  background: #ffe8ee;
+  color: #c62a55;
+}
+
+.camera-settings__preview {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  background: #241a56;
+  aspect-ratio: 4 / 3;
+  margin-bottom: 10px;
+}
+
+.camera-settings__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Mirrored: an unmirrored self-view makes people reach the wrong way. */
+  transform: scaleX(-1);
+  display: block;
+}
+
+.camera-settings__empty {
+  margin: 0 0 10px;
+  padding: 18px 16px;
+  border-radius: var(--r-md);
+  border: 2px dashed var(--violet-200);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.camera-settings__error {
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  background: #ffe8ee;
+  color: #c62a55;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.camera-settings__picker {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.camera-settings__picker span {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.camera-settings__picker select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--violet-200);
+  border-radius: var(--r-sm);
+  background: #fff;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.camera-settings__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.camera-settings__pipeline {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: #fff;
+  display: grid;
+  gap: 8px;
+}
+
+.camera-settings__pipeline li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.camera-settings__pipeline li.is-ok {
+  color: var(--ink);
+}
+
+.camera-settings__pipeline em {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+  line-height: 1.4;
 }

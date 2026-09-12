@@ -130,7 +130,7 @@
 }
 
 .lesson__path {
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -139,7 +139,7 @@
 
 .lesson__crumbs strong {
   font-family: var(--font-display);
-  font-size: 1.15rem;
+  font-size: var(--text-lg);
   color: var(--ink);
 }
 
@@ -247,7 +247,7 @@
   color: #fff;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1.02rem;
+  font-size: var(--text-base);
   letter-spacing: 0.06em;
   box-shadow: 0 2px 0 var(--violet-700);
 }
@@ -261,7 +261,7 @@
 .task__counter {
   padding: 0 16px;
   font-weight: 800;
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   color: var(--ink-soft);
   white-space: nowrap;
 }
@@ -293,7 +293,7 @@
   color: #04351f;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1.05rem;
+  font-size: var(--text-base);
   box-shadow: 0 6px 0 #1d9c63, var(--shadow-md);
 }
 
@@ -420,7 +420,7 @@
 .dialogue__name {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 0.86rem;
+  font-size: var(--text-sm);
   color: var(--violet-600);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -428,7 +428,7 @@
 
 .dialogue__text {
   margin-top: 2px;
-  font-size: 1.08rem;
+  font-size: var(--text-base);
   font-weight: 700;
   color: var(--ink);
   /* Two lines' worth, so the typewriter does not make the panel jump as it
@@ -456,7 +456,7 @@
 .dialogue__instruction {
   margin-top: 6px;
   font-family: var(--font-display);
-  font-size: 1.22rem;
+  font-size: var(--text-lg);
   font-weight: 800;
   color: var(--violet-700);
 }
@@ -469,8 +469,52 @@
   flex-wrap: wrap;
 }
 
+/* "Ask Curio" is deliberately quieter than the lesson's own buttons - it is
+   always available, but it must never compete with the step the child is
+   actually on. */
+.dialogue__ask-open {
+  margin-left: auto;
+  opacity: 0.85;
+}
+
+.dialogue__ask-open:hover {
+  opacity: 1;
+}
+
+.dialogue__ask {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dialogue__ask-input {
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: 11px 16px;
+  border: 2px solid var(--violet-200);
+  border-radius: var(--r-pill);
+  background: var(--panel);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.dialogue__ask-input::placeholder {
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.dialogue__ask-input:focus {
+  outline: none;
+  border-color: var(--violet-500);
+  box-shadow: 0 0 0 4px var(--violet-050);
+}
+
 .dialogue__hint {
-  font-size: 0.86rem;
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--ink-faint);
 }
@@ -490,7 +534,7 @@
   padding: 14px 22px;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: var(--text-base);
   color: var(--ink);
   cursor: pointer;
   box-shadow: var(--shadow-sm);
@@ -553,7 +597,7 @@
 
 .notation__sentence {
   margin-top: 8px;
-  font-size: 1.1rem;
+  font-size: var(--text-base);
   color: var(--ink);
 }
 
@@ -593,7 +637,7 @@
   text-align: center;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1.1rem;
+  font-size: var(--text-base);
   color: var(--ink);
 }
 
@@ -661,7 +705,7 @@
 .summary-flow__item strong {
   margin-top: 8px;
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: var(--text-base);
   color: var(--violet-700);
   letter-spacing: 0.06em;
 }
@@ -778,17 +822,28 @@
 }
 
 .complete__badge-icon {
-  font-size: 2.2rem;
+  display: grid;
+  place-items: center;
+}
+
+/* Reward lines pair an icon with a sentence, so they need to be a flex row
+   rather than a paragraph with a glyph sitting in the text. */
+.complete__reward-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-weight: 800;
 }
 
 .complete__badge strong {
   display: block;
   font-family: var(--font-display);
-  font-size: 1.3rem;
+  font-size: var(--text-lg);
 }
 
 .complete__badge span {
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   opacity: 0.85;
@@ -807,7 +862,7 @@
 }
 
 .complete__panel h3 {
-  font-size: 1.15rem;
+  font-size: var(--text-lg);
   margin-bottom: 12px;
 }
 
@@ -830,12 +885,12 @@
 .complete__recap strong {
   display: block;
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: var(--text-base);
 }
 
 .complete__recap span {
   display: block;
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   opacity: 0.85;
 }
 
@@ -859,6 +914,8 @@
   margin-top: 24px;
   display: flex;
   gap: 12px;
+  /* Matched heights - see the note on .entrance__actions. */
+  align-items: stretch;
   flex-wrap: wrap;
 }
 
@@ -873,7 +930,7 @@
 
 @media (max-width: 1000px) {
   .lesson__crumbs strong {
-    font-size: 1rem;
+    font-size: var(--text-base);
   }
   .task__stage--split {
     gap: 22px;
@@ -896,6 +953,22 @@
   .lesson__tools {
     display: none;
   }
+  /* A long lesson has ~17 step dots in one non-wrapping row, which on a phone
+     runs well past the edge of the screen. They wrap and shrink instead of
+     being hidden, because "how much is left" is worth keeping. */
+  .lesson__crumbs {
+    max-width: calc(100vw - 28px);
+    padding: 8px 14px;
+  }
+  .lesson__steps {
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
+  }
+  .lesson__steps span {
+    width: 11px;
+    height: 5px;
+  }
   .lesson__stage {
     inset: 96px 0 0;
   }
@@ -906,7 +979,7 @@
     display: none;
   }
   .dialogue__text {
-    font-size: 1rem;
+    font-size: var(--text-base);
   }
   .summary-flow {
     gap: 24px;

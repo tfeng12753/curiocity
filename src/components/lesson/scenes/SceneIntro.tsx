@@ -67,13 +67,17 @@ export function SceneIntro({ onNext }: { onNext: () => void }) {
         {(step === 'ask' || step === 'wrong') && (
           <div className="choice-row">
             <DwellTarget onActivate={() => answer(true)} dwellMs={800}>
+              {/* No icons on these two: the pizza they describe is already on
+                  screen directly above, and the only honest glyph for "in
+                  pieces" is a knife, which sits badly in a set built to feel
+                  friendly. The words carry it. */}
               <button className="choice" onClick={() => answer(true)}>
-                🍕 It's one whole
+                It's one whole
               </button>
             </DwellTarget>
             <DwellTarget onActivate={() => answer(false)} dwellMs={800}>
               <button className={`choice ${step === 'wrong' ? 'is-nudge' : ''}`} onClick={() => answer(false)}>
-                🔪 It's in pieces
+                It's in pieces
               </button>
             </DwellTarget>
           </div>

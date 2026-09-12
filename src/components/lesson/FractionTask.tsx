@@ -4,8 +4,10 @@ import { sfx } from '../../audio/sound';
 import { DwellTarget } from '../../tracker/DwellTarget';
 import { FractionCanvas, type Skin } from './FractionCanvas';
 import { Confetti } from './Confetti';
+import { Icon } from '../icons/Icon';
 import { DialogueBox } from './DialogueBox';
-import { fetchHint } from './hint';
+import { curio } from '../../ai/curio';
+import { cutPraise, pickLine, retryLineFor } from './dialogue';
 import {
   areEqualParts,
   buildRegions,
@@ -56,7 +58,9 @@ export function FractionTask({
   successLine,
   successLabel,
   fractionLabel,
-  retryLine = 'Remember, each part should be the same size. Try that cut again!',
+  // No default any more: with one, every task spoke the identical sentence on
+  // every miss. Left unset, retries come from the rotating pool in dialogue.ts.
+  retryLine,
   explodeOnSuccess = false,
   nextLabel = 'Next',
   size = 330,
@@ -70,6 +74,14 @@ export function FractionTask({
   const [mistakeCount, setMistakeCount] = useState(0);
   const [hintLoading, setHintLoading] = useState(false);
   const retryTimers = useRef<number[]>([]);
+  /**
+   * A contextual line fetched ahead of time. It is only ever spoken if it has
+   * already arrived by the time the next miss happens - the alternative is
+   * making a stuck child wait on a network round-trip before Curio reacts,
+   * which is the worst possible moment to add a pause.
+   */
+  const prefetchedLine = useRef<string | null>(null);
+  const prefetching = useRef(false);
 
   const cutsToGo = Math.max(0, requiredCuts - cuts.length);
   const regions = useMemo(() => buildRegions(kind, cuts), [kind, cuts]);
@@ -89,6 +101,25 @@ export function FractionTask({
 
   useEffect(() => () => retryTimers.current.forEach(window.clearTimeout), []);
 
+  /**
+   * Fetches a contextual line in the background for the *next* miss. Only worth
+   * it once a student has actually got stuck - before that the local pool is
+   * more varied than a model prompted with "they missed once" would be, and
+   * free. Failures are silent by design; the pool is always there.
+   */
+  const warmContextualLine = async (misses: number) => {
+    if (misses < 2 || prefetching.current || prefetchedLine.current) return;
+    prefetching.current = true;
+    try {
+      const currentInstruction =
+        phase === 'shade' ? (shadeInstruction ?? `Colour ${requiredShaded} equal parts.`) : cutInstruction;
+      const line = await curio.hint(objective, currentInstruction, misses);
+      if (line) prefetchedLine.current = line;
+    } finally {
+      prefetching.current = false;
+    }
+  };
+
   const finish = () => {
     setPhase('done');
     setLine(successLine);
@@ -100,10 +131,18 @@ export function FractionTask({
   // runs on every cut, not just the last, so an early miss can never leave
   // the shape unfinishable by the time the required count is reached.
   const rejectCut = (cut: Cut) => {
+    const misses = mistakeCount + 1;
     setNudge(true);
-    setLine(retryLine);
-    setMistakeCount((count) => count + 1);
+    // A ready-made contextual line wins; otherwise a rotating local phrase,
+    // escalating in warmth the longer this has been going on. Either way the
+    // same sentence is never heard twice in a row.
+    const ready = prefetchedLine.current;
+    prefetchedLine.current = null;
+    setLine(ready ?? (retryLine ?? retryLineFor(misses)));
+    setMistakeCount(misses);
     sfx.play('retry');
+    // Start warming the next one now, so it is waiting if they miss again.
+    void warmContextualLine(misses);
     retryTimers.current.push(
       window.setTimeout(() => {
         setCuts((current) => current.filter((entry) => entry !== cut));
@@ -126,14 +165,14 @@ export function FractionTask({
     setMistakeCount(0);
 
     if (next.length < requiredCuts) {
-      setLine(`Nice cut! ${next.length === requiredCuts - 1 ? 'One more to go.' : 'Keep going.'}`);
+      setLine(cutPraise(requiredCuts - next.length));
       return;
     }
 
     if (areEqualParts(buildRegions(kind, next))) {
       if (requiredShaded > 0) {
         setPhase('shade');
-        setLine(shadeLine ?? 'Perfect! Now colour in the parts we need.');
+        setLine(shadeLine ?? pickLine('toShade'));
         sfx.play('success');
       } else {
         finish();
@@ -158,8 +197,8 @@ export function FractionTask({
         sfx.play('shade');
         setLine(
           next.length > requiredShaded
-            ? `That's ${next.length}. We only need ${requiredShaded} - tap one again to remove it.`
-            : `${next.length} of ${requiredShaded} coloured. Keep going!`,
+            ? `That's ${next.length} - we only need ${requiredShaded}. ${pickLine('shadeTooMany')}`
+            : `${next.length} of ${requiredShaded} coloured. ${pickLine('shadeProgress')}`,
         );
       }
       return next;
@@ -170,7 +209,7 @@ export function FractionTask({
     const currentInstruction =
       phase === 'shade' ? (shadeInstruction ?? `Colour ${requiredShaded} equal parts.`) : cutInstruction;
     setHintLoading(true);
-    const hint = await fetchHint(objective, currentInstruction, mistakeCount);
+    const hint = await curio.hint(objective, currentInstruction, mistakeCount);
     setHintLoading(false);
     if (hint) setLine(hint);
   };
@@ -255,7 +294,14 @@ export function FractionTask({
             </span>
             {mistakeCount >= 2 && (
               <button className="btn btn--ghost btn--sm" onClick={requestHint} disabled={hintLoading}>
-                {hintLoading ? 'Thinking...' : '💡 Get a hint from Curio'}
+                {hintLoading ? (
+                  'Thinking...'
+                ) : (
+                  <>
+                    <Icon name="bulb" size={18} />
+                    Get a hint from Curio
+                  </>
+                )}
               </button>
             )}
           </>

@@ -206,7 +206,7 @@
   box-shadow: var(--shadow-md);
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1rem;
+  font-size: var(--text-base);
   color: var(--ink);
   white-space: nowrap;
 }
@@ -239,13 +239,13 @@
 }
 
 .city-card h3 {
-  font-size: 1.3rem;
+  font-size: var(--text-lg);
   color: var(--city-deep);
 }
 
 .city-card p {
   margin-top: 6px;
-  font-size: 0.9rem;
+  font-size: var(--text-md);
   font-weight: 600;
   color: var(--ink-soft);
 }
@@ -259,7 +259,7 @@
 }
 
 .city-card__chip {
-  font-size: 0.72rem;
+  font-size: var(--text-2xs);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -295,7 +295,7 @@
     width: 220px;
   }
   .city-island__label {
-    font-size: 0.84rem;
+    font-size: var(--text-sm);
     padding: 7px 13px;
   }
 }
@@ -311,7 +311,7 @@
     font-size: clamp(1.7rem, 7.6vw, 2.3rem);
   }
   .world__hero p {
-    font-size: 0.86rem;
+    font-size: var(--text-sm);
     margin-top: 8px;
   }
 }
