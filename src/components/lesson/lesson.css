@@ -195,6 +195,12 @@
   justify-content: center;
   gap: 14px;
   min-height: 0;
+  /* Flex items default to min-width: auto, which refuses to shrink below a
+     fixed-px FractionCanvas size (e.g. size={420}) and overflows narrow
+     screens instead - this lets the canvas's own max-width: 100% actually
+     take effect. */
+  min-width: 0;
+  width: 100%;
 }
 
 .task__stage--split {
@@ -243,6 +249,8 @@
   position: relative;
   display: grid;
   place-items: center;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .task__success {

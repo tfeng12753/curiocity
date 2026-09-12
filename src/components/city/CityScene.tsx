@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { CITIES, type CityId, type LevelDefinition } from '../../data/cities';
 import { useProgress } from '../../state/progress';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { VEHICLES } from '../../data/vehicles';
 import { sfx } from '../../audio/sound';
 import { DwellTarget } from '../../tracker/DwellTarget';
@@ -82,6 +83,11 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
   const { isLevelComplete, isLevelUnlocked, cityProgress } = useProgress();
   const { done, total } = cityProgress(cityId);
   const [toast, setToast] = useState<string | null>(null);
+  // The absolute-positioned map has `overflow: hidden` and node positions
+  // tuned for wide screens, so anything narrower than that doesn't just look
+  // cramped - it can clip destinations off-screen with no way to scroll to
+  // them. Same breakpoint WorldScene already uses for its own narrow layout.
+  const narrow = useMediaQuery('(max-width: 900px)');
 
   const showToast = (message: string) => {
     sfx.play('retry');
@@ -101,6 +107,24 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
     }
     sfx.play('travel');
     onOpenLevel(level.id);
+  };
+
+  const describeLevel = (level: LevelDefinition) => {
+    const complete = isLevelComplete(cityId, level.id);
+    const unlocked = isLevelUnlocked(cityId, level.id);
+    const playable = level.status === 'playable' && unlocked;
+    const state = complete ? 'is-complete' : playable ? 'is-playable' : 'is-locked';
+    const reward = level.rewardVehicleId ? VEHICLES[level.rewardVehicleId] : null;
+    const badgeText = complete
+      ? reward
+        ? `${reward.icon} Completed`
+        : '⭐ Completed'
+      : playable
+        ? `Level 0${level.index} · Start`
+        : level.status === 'soon'
+          ? 'Coming soon'
+          : 'Locked';
+    return { complete, playable, state, reward, badgeText };
   };
 
   return (
@@ -127,84 +151,121 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
 
       <p className="city__subtitle">{city.blurb}</p>
 
-      <div className="city__stage">
-        <svg className="city__roads" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path className="road-base" d={roadThrough(city.levels)} />
-          <path className="road-dash" d={roadThrough(city.levels)} />
-        </svg>
+      {narrow ? (
+        <div className="city__list">
+          {(city.chapters ?? [null]).map((chapter) => {
+            const levelsInChapter = chapter
+              ? city.levels.filter((level) => level.chapterId === chapter.id)
+              : city.levels;
+            if (levelsInChapter.length === 0) return null;
 
-        {city.chapters?.map((chapter) => {
-          const first = city.levels.find((level) => level.chapterId === chapter.id);
-          if (!first) return null;
-          return (
-            <div
-              key={chapter.id}
-              className="map-chapter-label"
-              style={{ left: `${first.x}%`, top: `${first.y - 16}%` }}
-            >
-              {chapter.name}
-            </div>
-          );
-        })}
+            return (
+              <div className="city__list-group" key={chapter?.id ?? 'all'}>
+                {chapter && <h2 className="city__list-chapter">{chapter.name}</h2>}
+                {levelsInChapter.map((level, i) => {
+                  const { state, badgeText } = describeLevel(level);
+                  return (
+                    <motion.div
+                      key={level.id}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.06 * i + 0.1 }}
+                    >
+                      <DwellTarget onActivate={() => openLevel(level)} dwellMs={900}>
+                        <button
+                          className={`city__list-item ${state}`}
+                          onClick={() => openLevel(level)}
+                          onMouseEnter={() => sfx.play('hover')}
+                        >
+                          <span className="city__list-art">
+                            <Landmark kind={level.landmark} />
+                          </span>
+                          <span className="city__list-body">
+                            <strong>
+                              {level.index}. {level.name}
+                            </strong>
+                            <span className="city__list-tagline">{level.tagline}</span>
+                          </span>
+                          <span className={`map-node__badge ${state === 'is-complete' ? 'is-done' : state === 'is-playable' ? 'is-start' : 'is-soon'}`}>
+                            {badgeText}
+                          </span>
+                        </button>
+                      </DwellTarget>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="city__stage">
+          <svg className="city__roads" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path className="road-base" d={roadThrough(city.levels)} />
+            <path className="road-dash" d={roadThrough(city.levels)} />
+          </svg>
 
-        {city.levels.map((level, i) => {
-          const complete = isLevelComplete(cityId, level.id);
-          const unlocked = isLevelUnlocked(cityId, level.id);
-          const playable = level.status === 'playable' && unlocked;
-          const state = complete ? 'is-complete' : playable ? 'is-playable' : 'is-locked';
-          const reward = level.rewardVehicleId ? VEHICLES[level.rewardVehicleId] : null;
+          {city.chapters?.map((chapter) => {
+            const first = city.levels.find((level) => level.chapterId === chapter.id);
+            if (!first) return null;
+            return (
+              <div
+                key={chapter.id}
+                className="map-chapter-label"
+                style={{ left: `${first.x}%`, top: `${first.y - 16}%` }}
+              >
+                {chapter.name}
+              </div>
+            );
+          })}
 
-          return (
-            <motion.div
-              key={level.id}
-              className={`map-node ${state}`}
-              style={{ left: `${level.x}%`, top: `${level.y}%` }}
-              initial={{ opacity: 0, y: 26, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.12 * i + 0.15, type: 'spring', stiffness: 180, damping: 18 }}
-            >
-              <DwellTarget onActivate={() => openLevel(level)} dwellMs={900}>
-                <button
-                  className="map-node__button"
-                  onClick={() => openLevel(level)}
-                  onMouseEnter={() => sfx.play('hover')}
-                  aria-label={`${level.name}. ${level.tagline}. ${
-                    complete ? 'Completed' : playable ? 'Ready to play' : 'Locked'
-                  }`}
-                >
-                  <span className="map-node__pill">
-                    <span className="map-node__index">{level.index}</span>
-                    {level.name}
-                  </span>
+          {city.levels.map((level, i) => {
+            const { complete, playable, state, badgeText } = describeLevel(level);
 
-                  <span className="map-node__art">
-                    <Landmark kind={level.landmark} />
-                    <span className="map-node__status">
-                      {complete ? '✓' : playable ? '▶' : '🔒'}
-                    </span>
-                  </span>
-
-                  <span
-                    className={`map-node__badge ${
-                      complete ? 'is-done' : playable ? 'is-start' : 'is-soon'
+            return (
+              <motion.div
+                key={level.id}
+                className={`map-node ${state}`}
+                style={{ left: `${level.x}%`, top: `${level.y}%` }}
+                initial={{ opacity: 0, y: 26, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: 0.12 * i + 0.15, type: 'spring', stiffness: 180, damping: 18 }}
+              >
+                <DwellTarget onActivate={() => openLevel(level)} dwellMs={900}>
+                  <button
+                    className="map-node__button"
+                    onClick={() => openLevel(level)}
+                    onMouseEnter={() => sfx.play('hover')}
+                    aria-label={`${level.name}. ${level.tagline}. ${
+                      complete ? 'Completed' : playable ? 'Ready to play' : 'Locked'
                     }`}
                   >
-                    {complete
-                      ? reward
-                        ? `${reward.icon} Completed`
-                        : '⭐ Completed'
-                      : playable
-                        ? `Level 0${level.index} · Start`
-                        : level.status === 'soon'
-                          ? 'Coming soon'
-                          : 'Locked'}
-                  </span>
-                </button>
-              </DwellTarget>
-            </motion.div>
-          );
-        })}
-      </div>
+                    <span className="map-node__pill">
+                      <span className="map-node__index">{level.index}</span>
+                      {level.name}
+                    </span>
+
+                    <span className="map-node__art">
+                      <Landmark kind={level.landmark} />
+                      <span className="map-node__status">
+                        {complete ? '✓' : playable ? '▶' : '🔒'}
+                      </span>
+                    </span>
+
+                    <span
+                      className={`map-node__badge ${
+                        complete ? 'is-done' : playable ? 'is-start' : 'is-soon'
+                      }`}
+                    >
+                      {badgeText}
+                    </span>
+                  </button>
+                </DwellTarget>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="city__stamp">
         <span style={{ fontSize: '1.4rem' }}>⭐</span>

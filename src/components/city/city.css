@@ -129,6 +129,135 @@
   color: var(--ink-soft);
 }
 
+/* -------------------------------------------------------- narrow list view */
+
+.city__list {
+  position: relative;
+  z-index: 15;
+  margin: 24px auto 40px;
+  padding: 0 20px;
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.city__list-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.city__list-chapter {
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 8px rgba(24, 16, 62, 0.35);
+}
+
+.city__list-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: none;
+  border-radius: var(--r-lg);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-md);
+  padding: 10px 16px 10px 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.city__list-item.is-locked {
+  opacity: 0.6;
+}
+
+.city__list-art {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 64px;
+}
+
+.city__list-art .landmark {
+  width: 100%;
+  height: 100%;
+}
+
+.city__list-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.city__list-body strong {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  color: var(--ink);
+}
+
+.city__list-tagline {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.city__list .map-node__badge {
+  flex: 0 0 auto;
+  position: static;
+  font-size: 0.68rem;
+  padding: 6px 10px;
+}
+
+@media (max-width: 900px) {
+  .city {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  /* Redundant with the "Your progress" pill in the HUD, and fighting for
+     the same fixed bottom-left corner as scrolled list content. */
+  .city__stamp {
+    display: none;
+  }
+
+  /* The HUD and subtitle are absolutely positioned assuming one short row of
+     text - on a narrow screen the three HUD pills wrap internally instead of
+     fitting on one line, growing taller than the fixed gap before the
+     subtitle's own fixed `top` was set for, so it overlaps. Static/relative
+     flow sidesteps the problem entirely instead of guessing new offsets. */
+  .city__hud {
+    position: static;
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 10px;
+    /* Clears the separate, globally fixed TopNav bar above this scene -
+       same 84px it always reserved, just via padding now that this flows
+       normally instead of being positioned against the viewport directly. */
+    padding: 84px 16px 0;
+  }
+  .city__title,
+  .city__back,
+  .city__progress {
+    font-size: 0.82rem;
+    padding: 8px 14px;
+    white-space: nowrap;
+  }
+  .city__subtitle {
+    position: static;
+    transform: none;
+    margin: 12px auto 0;
+    padding: 0 24px;
+  }
+}
+
 /* ------------------------------------------------------------------ stage */
 
 .city__stage {

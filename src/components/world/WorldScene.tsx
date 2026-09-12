@@ -28,9 +28,9 @@ const WIDE_LAYOUT: Record<CityId, Placement> = {
 
 /** Portrait and narrow screens stack the world into a vertical trail instead. */
 const NARROW_LAYOUT: Record<CityId, Placement> = {
-  chemistry: { left: '26%', top: '17%', width: '48%', delay: 1.2, cardBelow: true },
-  math: { left: '4%', top: '38%', width: '54%', delay: 0, cardBelow: true },
-  physics: { left: '42%', top: '60%', width: '54%', delay: 0.6 },
+  chemistry: { left: '26%', top: '24%', width: '48%', delay: 1.2, cardBelow: true },
+  math: { left: '4%', top: '44%', width: '54%', delay: 0, cardBelow: true },
+  physics: { left: '42%', top: '66%', width: '54%', delay: 0.6 },
 };
 
 const WIDE_ROUTES = ['M25 64 C32 56 40 48 47 46', 'M52 47 C62 50 70 58 76 65', 'M24 70 C40 84 62 84 78 71'];

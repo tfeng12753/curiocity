@@ -164,3 +164,24 @@
     justify-content: center;
   }
 }
+
+@media (max-width: 640px) {
+  /* The centered crumb trail and the back button both sit at ~85px on
+     desktop (clearing the separate, globally fixed TopNav bar above this
+     screen) with room to spare either side - on a narrow screen the
+     centered text starts close enough to the left edge to run under the
+     button, so drop the crumb to its own row below instead of fighting
+     for the same one. The back button keeps its original top so it still
+     clears TopNav. */
+  .entrance__crumbs {
+    top: 138px;
+    max-width: 92vw;
+    white-space: normal;
+    text-align: center;
+    justify-content: center;
+    font-size: 0.68rem;
+  }
+  .entrance {
+    padding-top: 180px;
+  }
+}
