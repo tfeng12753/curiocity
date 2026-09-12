@@ -5,7 +5,7 @@ import { Logo } from './Logo';
 import { Icon } from '../icons/Icon';
 import './layout.css';
 
-export type NavPanel = 'progress' | 'achievements' | 'customize' | null;
+export type NavPanel = 'progress' | 'achievements' | 'customize' | 'settings' | null;
 
 interface TopNavProps {
   onHome: () => void;
@@ -64,6 +64,14 @@ export function TopNav({ onHome, openPanel, onOpenPanel, compact = false }: TopN
           <Icon name="star" size={18} />
           {totalComplete} / {totalLevels}
         </span>
+        <button
+          className={`topnav__icon ${openPanel === 'settings' ? 'is-active' : ''}`}
+          onClick={() => onOpenPanel(openPanel === 'settings' ? null : 'settings')}
+          aria-label="Settings"
+          title="Settings"
+        >
+          ⚙️
+        </button>
         <button
           className="topnav__icon"
           onClick={toggleMute}

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { sfx } from '../../../audio/sound';
 import { BADGES, useProgress } from '../../../state/progress';
@@ -8,6 +8,7 @@ import { DwellTarget } from '../../../tracker/DwellTarget';
 import { Curio } from '../../curio/Curio';
 import { Icon } from '../../icons/Icon';
 import { Confetti } from '../Confetti';
+import { curio } from '../../../ai/curio';
 
 interface RecapRow {
   top: string;
@@ -57,6 +58,29 @@ export function LessonComplete({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+
+  /*
+    The written blurb is the same for every child who finishes this level.
+    Curio's version is about what THIS run actually covered, and arrives a
+    beat later - the celebration is already on screen, so a slow or missing
+    reply costs nothing.
+  */
+  const [curioRecap, setCurioRecap] = useState<string | null>(null);
+  // Depends on the joined string, never on the `learned` array itself: callers
+  // pass an inline literal, so a new reference arrives on every render and an
+  // array dependency would re-run this - and bill another IFM call - forever.
+  const learnedKey = learned.join('; ');
+
+  useEffect(() => {
+    let live = true;
+    curio.recap(title, learnedKey).then((text) => {
+      if (live && text) setCurioRecap(text);
+    });
+    return () => {
+      live = false;
+    };
+  }, [title, learnedKey]);
+
   const badge = BADGES[badgeId];
   const level = CITIES[cityId].levels.find((entry) => entry.id === levelId);
   const vehicle = level?.rewardVehicleId ? VEHICLES[level.rewardVehicleId] : null;
@@ -83,7 +107,7 @@ export function LessonComplete({
             You did it!
           </span>
           <h1>{title}</h1>
-          <p>{blurb}</p>
+          <p>{curioRecap ?? blurb}</p>
           {vehicle && (
             <p className="complete__reward-line">
               <Icon name={vehicle.icon} size={22} />

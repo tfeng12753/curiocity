@@ -125,7 +125,9 @@ src/
 scripts/
   playthrough.mjs           clicks through the entire lesson and asserts it completes
   camera-check.mjs          boots hand tracking against a synthetic camera
-  sync-mediapipe-wasm.mjs   copies the wasm runtime into public/ (runs on install)
+  voice-audition.mjs        reads one line in every candidate voice, to choose by ear
+  sync-mediapipe-wasm.mjs   vendors the wasm runtime *and* the 7.8MB hand model
+                            into public/ (runs on install)
 server/
   index.mjs                 optional TTS proxy - see "Voice" below
 ```
@@ -141,19 +143,114 @@ node scripts/playthrough.mjs   # full mouse playthrough, screenshots to /tmp/sho
 node scripts/camera-check.mjs  # verifies hand tracking initialises end to end
 ```
 
-## Voice and AI hints (both optional)
+## Voice and AI (both optional)
 
-Curio can read her dialogue lines aloud with ElevenLabs, and can generate a
-fresh, contextual hint (via IFM) when a student is stuck instead of the same
-static retry line every time. Both are entirely optional and independent —
-with no key configured, `/api/speak` or `/api/hint` returns a clear error,
-the frontend swallows it, and the lesson runs exactly as before.
+Curio reads her dialogue aloud with ElevenLabs, and speaks for herself via
+IFM in three places, all behind `POST /api/curio` with an `intent`:
+
+| Intent   | Where it shows up                                                    |
+| -------- | -------------------------------------------------------------------- |
+| `hint`   | A contextual nudge when a student is stuck, instead of the same static retry line |
+| `ask`    | **Ask me anything** in the dialogue box — a child's own question, answered in Curio's voice and read aloud |
+| `recap`  | The completion screen, describing what *this* run actually covered instead of a fixed blurb |
+| `praise` | Available and prompted, not yet wired to a surface (see the note below) |
+
+One endpoint rather than one per feature: the intents share a persona, a
+cache and a failure mode, so a new place for Curio to speak is a prompt plus
+a call site. The persona lives in `CURIO_PERSONA` in `server/index.mjs` —
+that single string is where her whimsy is tuned.
+
+Everything is optional and degrades quietly. With no key configured, or the
+proxy offline, `src/ai/curio.ts` returns `null` and every caller falls back
+to written copy; narration falls back to the browser's own speech synthesis.
+AI only ever *upgrades* what a child sees — it never gates it.
+
+**The ⚙️ in the top bar is where a session gets fixed.** It opens on the camera,
+because that's what goes wrong:
+
+- A **live self-view** — the only real proof the camera works. A green "ready"
+  label is equally true of a lens pointing at a closed lid, of the wrong camera,
+  and of a stream that stalled a minute ago.
+- A **camera picker**, shown when there's more than one. `facingMode: 'user'`
+  regularly picks the wrong one on a machine with an external webcam, OBS's
+  virtual camera, or a Mac handing over to an iPhone via Continuity — and the
+  choice is remembered, because a fix you repeat every visit isn't a fix.
+- **Restart camera**, the usual cure for a stalled feed.
+- A **pipeline report**, read in the order things run, so the first ✗ is the
+  fault: model loaded → seeing video frames → detection running → hand found.
+  Between a live camera and a moving cursor those four can each fail while
+  looking identical from outside — a lit camera light and a cursor that doesn't
+  move — which is why "the camera is on but nothing happens" used to be
+  unanswerable.
+- The same **diagnostics** as the first-run gate (secure context, browser
+  support, permission state with the exact fix, cameras detected) — they matter
+  more here, since this is where you go *after* the camera has let you down.
+
+**And the paid parts can be switched off** from the same panel — no redeploy,
+and nothing is lost but the polish. `src/state/settings.ts` holds two choices,
+saved per device:
+
+- **Curio's voice** — her real voice (credits), the device's own speech
+  synthesis (free, robotic), or no talking at all (her lines stay on screen)
+- **Curio's answers** — off means written hints, no personalised recap, and the
+  "Ask me anything" box is hidden rather than offered and then apologising
+
+It's a plain module, not React state, because `voice.ts` and `ai/curio.ts` read
+it synchronously and aren't components; `useSettings()` subscribes the UI to the
+same single source of truth. Verified: with the voice off a lesson makes zero
+narration requests, and with answers off the question box does not appear.
+
+**Two budgets also protect the keys**, because they're a fixed monthly allowance
+shared by every child on the site and one bored student holding down "Ask"
+could spend it all:
+
+- `CALL_BUDGET` in `src/ai/curio.ts` — AI replies per page visit (15)
+- `SYNTH_BUDGET` in `src/audio/voice.ts` — *new* narration lines per visit (40); repeats come from cache and cost nothing
+
+Past either, the product behaves exactly as it does with no key at all.
+
+**Narration is cached in the browser.** Curio says the same few dozen lines to
+every child forever, and each one is a paid request. `src/audio/audioCache.ts`
+keeps the MP3s in IndexedDB, so a line is paid for once per browser rather than
+once per visit — it survives reloads, and it survives the proxy's own in-memory
+cache being wiped every time a free Render instance spins down. Cache hits are
+served before the budget check, so replaying a lesson costs nothing at all.
+Measured: one request on a first visit, zero for the same line after a reload.
+
+> **Bump `DB_VERSION` in `audioCache.ts` whenever the voice changes** — the
+> voice ID, the delivery settings, or the speed/pitch pair below. The cache key
+> can't see any of them (they live in the server's environment), so without a
+> bump children keep hearing lines in the old voice until they age out.
+
+**Pick her voice by ear, not by adjective:**
+
+```bash
+node --env-file=server/.env scripts/voice-audition.mjs
+```
+
+That writes one MP3 per candidate voice, all reading the same line with the
+exact settings the proxy uses, then you set `ELEVENLABS_VOICE_ID` to whichever
+you liked. Six short lines costs about 350 characters of quota.
+
+> **Don't fake the pitch.** Resampling playback to raise it (`playbackRate`
+> with `preservesPitch` off) drags the formants up too — the "munchkin" effect,
+> which reads as a processed adult rather than a child. `EXCITEMENT_RATE` in
+> `src/audio/voice.ts` is the knob and it is set to 1 on purpose; past about
+> 1.05 the artefacts show. Youth comes from picking a genuinely young voice and
+> from how her lines are written.
 
 Both APIs need a secret key that can't live in client-side code, so this is
 the one deliberate exception to "no server" below: `server/` is a small,
 dependency-free Node proxy whose only job is to hold those keys and forward
-requests. Dialogue lines and hint contexts repeat a lot as kids replay
-lessons, so both are cached in memory.
+requests.
+
+**Picking a voice is a trap on the free plan.** ElevenLabs rejects Voice
+Library voices over the API with `402 Free users cannot use library voices`,
+and that covers most of the famous IDs — Rachel, Aria, Domi, Charlotte, Elli.
+Only the account's own default voices work. Six that are verified working are
+listed above `DEFAULT_VOICE_ID` in `server/index.mjs`; set `ELEVENLABS_VOICE_ID`
+to switch. If that override turns out to be unusable, the proxy logs the real
+reason and falls back to a known-good voice rather than going silent.
 
 To run it locally:
 

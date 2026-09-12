@@ -563,3 +563,70 @@
 .cosmetic-card.is-confirming span {
   color: var(--nudge);
 }
+
+/* ---------------------------------------------------------------- settings */
+
+.setting-list {
+  display: grid;
+  gap: 8px;
+}
+
+.setting-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid var(--panel-border);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.setting-option:hover {
+  border-color: var(--violet-400);
+}
+
+.setting-option.is-on {
+  border-color: var(--mint-500);
+  background: var(--success-soft);
+}
+
+.setting-option__mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 2px solid var(--violet-200);
+  background: #fff;
+  font-size: 0.7rem;
+  color: var(--success);
+}
+
+.setting-option.is-on .setting-option__mark {
+  border-color: var(--mint-500);
+}
+
+.setting-option strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+}
+
+.setting-option span span {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.topnav__icon.is-active {
+  background: var(--violet-600);
+}

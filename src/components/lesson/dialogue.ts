@@ -11,9 +11,9 @@
 
     - these pools, which are instant, free, work with no network and no API key,
       and cover the lines that fire constantly
-    - the AI hint path (hint.ts), which is genuinely contextual but costs a
-      round-trip, so it is prefetched in the background and only ever used when
-      it is already sitting ready
+    - the AI hint path (ai/curio.ts), which is genuinely contextual but costs a
+      round-trip and draws on a shared call budget, so it is prefetched in the
+      background and only ever used when it is already sitting ready
 
   Keeping the hot path local also protects the narration bill: the speech proxy
   caches by exact text, so a small rotating set of phrases still gets cache
