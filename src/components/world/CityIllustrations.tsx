@@ -329,9 +329,13 @@ export function ChemistryIsland({ animated = true }: { animated?: boolean }) {
         {/* helix band, front half - drawn after the block so it wraps around it */}
         <g transform="translate(106 136) rotate(-14)">
           <path d="M-42 0 A42 15 0 0 0 42 0" fill="none" stroke="#ffc24a" strokeWidth="11" />
-          {helixRungs.map((rung) => (
+          {/* Keyed by position, not by rung.x: the band sweeps -90deg to +90deg
+              and cos is symmetric about 0, so rungs 0/8, 1/7, 2/6 and 3/5 each
+              share an x to the last decimal place - four duplicate keys per
+              render, and React is free to drop or duplicate the elements. */}
+          {helixRungs.map((rung, i) => (
             <line
-              key={rung.x}
+              key={i}
               x1={rung.x * 0.86}
               y1={rung.y * 0.86 + 3}
               x2={rung.x * 1.14}
