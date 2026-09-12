@@ -124,6 +124,22 @@ node scripts/playthrough.mjs   # full mouse playthrough, screenshots to /tmp/sho
 node scripts/camera-check.mjs  # verifies hand tracking initialises end to end
 ```
 
+## Deploying
+
+This is a static build, so any static host works. `render.yaml` at the repo root
+is a Render blueprint — point Render at the repository and it picks the settings
+up automatically. To configure a static site by hand instead:
+
+| Setting           | Value                    |
+| ----------------- | ------------------------ |
+| Build command     | `npm ci && npm run build` |
+| Publish directory | `dist`                   |
+| Rewrite rule      | `/*` → `/index.html`     |
+
+The app keeps every scene on a single page, so the rewrite is a safety net rather
+than a requirement today — it keeps unknown paths landing on the app instead of a
+404. The camera only works over HTTPS, which Render terminates for you.
+
 ## Notes and limitations
 
 - Optimised for desktop and laptop, where the camera interaction makes sense; the

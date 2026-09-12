@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: learnverse
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      # The hand tracker needs the camera, which browsers only grant over HTTPS
+      # to a page that is allowed to use it.
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(self)

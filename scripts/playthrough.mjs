@@ -41,7 +41,7 @@ async function expect(label, condition) {
   if (!condition) problems.push(`ASSERTION FAILED: ${label}`);
 }
 
-await page.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
+await page.goto(process.env.BASE ?? 'http://localhost:5173/', { waitUntil: 'networkidle' });
 await page.waitForTimeout(1200);
 await shot('01-world');
 
