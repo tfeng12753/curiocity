@@ -164,6 +164,23 @@ export function Landmark({ kind }: { kind: LandmarkKind }) {
           <circle cx="50" cy="50" r="8" fill="#7a5cf0" />
         </svg>
       );
+    case 'alien-outpost':
+      return (
+        <svg viewBox="0 0 100 115" className="landmark">
+          <Plinth top="#b3ecfa" side="#12a5d6" />
+          {/* saucer */}
+          <ellipse cx="50" cy="56" rx="34" ry="10" fill="#3fd68f" />
+          <ellipse cx="50" cy="50" rx="20" ry="16" fill="#bff2d9" stroke="#24b473" strokeWidth="2" />
+          <circle cx="50" cy="46" r="4" fill="#5b3fe0" opacity="0.7" />
+          {/* antenna */}
+          <path d="M50 34 v-10" stroke="#24b473" strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="50" cy="22" r="4" fill="#ffc24a" />
+          {/* a curious little alien peeking out */}
+          <circle cx="50" cy="66" r="9" fill="#7a5cf0" />
+          <circle cx="46" cy="64" r="2.4" fill="#fff" />
+          <circle cx="54" cy="64" r="2.4" fill="#fff" />
+        </svg>
+      );
     default:
       return null;
   }

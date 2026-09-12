@@ -1,3 +1,5 @@
+import type { VehicleId } from './vehicles';
+
 export type CityId = 'math' | 'physics' | 'chemistry';
 
 export type LevelStatus = 'playable' | 'soon';
@@ -13,6 +15,21 @@ export interface LevelDefinition {
   status: LevelStatus;
   /** Illustration key rendered inside the map for this destination. */
   landmark: LandmarkKind;
+  /** Groups this level under a chapter heading on the map (optional - only Math City uses this so far). */
+  chapterId?: string;
+  /** Another level's id that must be completed first - the map shows this one locked until then. */
+  requiresLevelId?: string;
+  /** What finishing this level earns the player. */
+  rewardVehicleId?: VehicleId;
+  coinReward?: number;
+  /** Shown on the level entrance screen; falls back to a generic default when omitted. */
+  learningPoints?: string[];
+}
+
+export interface ChapterDefinition {
+  id: string;
+  index: number;
+  name: string;
 }
 
 export type LandmarkKind =
@@ -28,7 +45,8 @@ export type LandmarkKind =
   | 'atom-tower'
   | 'reaction-lab'
   | 'acid-harbor'
-  | 'matter-dome';
+  | 'matter-dome'
+  | 'alien-outpost';
 
 export interface CityDefinition {
   id: CityId;
@@ -38,7 +56,10 @@ export interface CityDefinition {
   blurb: string;
   cta: string;
   status: LevelStatus;
+  /** Flat, authoritative level list - always present, used for progress counting and rendering. */
   levels: LevelDefinition[];
+  /** Optional grouping metadata for cities whose levels carry a chapterId (Math City only, for now). */
+  chapters?: ChapterDefinition[];
 }
 
 export const CITIES: Record<CityId, CityDefinition> = {
@@ -50,56 +71,102 @@ export const CITIES: Record<CityId, CityDefinition> = {
     blurb: 'A city built from numbers, patterns, shapes, and puzzles.',
     cta: 'Enter City',
     status: 'playable',
+    chapters: [
+      { id: 'chapter-1', index: 1, name: 'Chapter 1 · Fractions' },
+      { id: 'chapter-2', index: 2, name: 'Chapter 2 · Alien Outpost' },
+    ],
     levels: [
       {
         id: 'fractions',
         index: 1,
         name: 'Fraction Workshop',
         tagline: 'Split wholes. Build parts. Discover fractions.',
-        x: 16,
-        y: 62,
+        x: 12,
+        y: 64,
         status: 'playable',
         landmark: 'fraction-workshop',
+        chapterId: 'chapter-1',
+        rewardVehicleId: 'bike',
+        coinReward: 20,
+        learningPoints: [
+          'Meet a whole and split it into equal parts',
+          'Discover halves, fourths and what 3/4 means',
+          'Build and colour fractions with your own finger',
+        ],
       },
       {
-        id: 'geometry',
+        id: 'fractions-2',
         index: 2,
-        name: 'Geometry Park',
-        tagline: 'Explore shapes, space, and form.',
-        x: 34,
+        name: 'Thirds & Sixths',
+        tagline: 'Trickier splits - and your first equivalent fractions.',
+        x: 28,
+        y: 30,
+        status: 'playable',
+        landmark: 'fraction-workshop',
+        chapterId: 'chapter-1',
+        requiresLevelId: 'fractions',
+        rewardVehicleId: 'car',
+        coinReward: 30,
+        learningPoints: [
+          'Split wholes into thirds and sixths',
+          'See why 2/6 is the same amount as 1/3',
+          'Cut a shape twice to make it twice as fine',
+        ],
+      },
+      {
+        id: 'fractions-3',
+        index: 3,
+        name: 'Fraction Challenge',
+        tagline: 'Mixed practice, then prove you can compare fractions.',
+        x: 44,
+        y: 64,
+        status: 'playable',
+        landmark: 'fraction-workshop',
+        chapterId: 'chapter-1',
+        requiresLevelId: 'fractions-2',
+        rewardVehicleId: 'spaceship',
+        coinReward: 40,
+        learningPoints: [
+          'Practice halves, fourths, thirds and sixths in one run',
+          'Decide which of two fractions is bigger',
+          'Unlock the spaceship and Chapter 2',
+        ],
+      },
+      {
+        id: 'alien-1',
+        index: 4,
+        name: 'Alien Landing Site',
+        tagline: 'Coming soon - the crew has a lot more slicing to do.',
+        x: 62,
         y: 30,
         status: 'soon',
-        landmark: 'geometry-park',
+        landmark: 'alien-outpost',
+        chapterId: 'chapter-2',
+        requiresLevelId: 'fractions-3',
       },
       {
-        id: 'multiplication',
-        index: 3,
-        name: 'Multiplication Market',
-        tagline: 'Discover patterns through numbers.',
-        x: 54,
+        id: 'alien-2',
+        index: 5,
+        name: 'Alien Outpost',
+        tagline: 'Coming soon.',
+        x: 78,
         y: 64,
         status: 'soon',
-        landmark: 'multiplication-market',
+        landmark: 'alien-outpost',
+        chapterId: 'chapter-2',
+        requiresLevelId: 'alien-1',
       },
       {
-        id: 'puzzles',
-        index: 4,
-        name: 'Puzzle Station',
-        tagline: 'Use what you know to solve new problems.',
-        x: 72,
+        id: 'alien-3',
+        index: 6,
+        name: 'Mothership',
+        tagline: 'Coming soon.',
+        x: 92,
         y: 30,
         status: 'soon',
-        landmark: 'puzzle-station',
-      },
-      {
-        id: 'numbers',
-        index: 5,
-        name: 'Number Kingdom',
-        tagline: 'Where every number has a home.',
-        x: 85,
-        y: 62,
-        status: 'soon',
-        landmark: 'number-kingdom',
+        landmark: 'alien-outpost',
+        chapterId: 'chapter-2',
+        requiresLevelId: 'alien-2',
       },
     ],
   },

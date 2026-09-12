@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { CITIES, type CityId, type LevelDefinition } from '../../data/cities';
 import { useProgress } from '../../state/progress';
+import { VEHICLES } from '../../data/vehicles';
 import { sfx } from '../../audio/sound';
 import { DwellTarget } from '../../tracker/DwellTarget';
 import { Landmark } from './Landmarks';
@@ -78,15 +79,24 @@ interface CitySceneProps {
 
 export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
   const city = CITIES[cityId];
-  const { isLevelComplete, cityProgress } = useProgress();
+  const { isLevelComplete, isLevelUnlocked, cityProgress } = useProgress();
   const { done, total } = cityProgress(cityId);
   const [toast, setToast] = useState<string | null>(null);
 
+  const showToast = (message: string) => {
+    sfx.play('retry');
+    setToast(message);
+    setTimeout(() => setToast(null), 2200);
+  };
+
   const openLevel = (level: LevelDefinition) => {
     if (level.status !== 'playable') {
-      sfx.play('retry');
-      setToast(`${level.name} is still being built - coming soon!`);
-      setTimeout(() => setToast(null), 2200);
+      showToast(`${level.name} is still being built - coming soon!`);
+      return;
+    }
+    if (!isLevelUnlocked(cityId, level.id)) {
+      const prereq = city.levels.find((entry) => entry.id === level.requiresLevelId);
+      showToast(`Finish ${prereq?.name ?? 'the previous lesson'} first to unlock ${level.name}.`);
       return;
     }
     sfx.play('travel');
@@ -123,10 +133,26 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
           <path className="road-dash" d={roadThrough(city.levels)} />
         </svg>
 
+        {city.chapters?.map((chapter) => {
+          const first = city.levels.find((level) => level.chapterId === chapter.id);
+          if (!first) return null;
+          return (
+            <div
+              key={chapter.id}
+              className="map-chapter-label"
+              style={{ left: `${first.x}%`, top: `${first.y - 16}%` }}
+            >
+              {chapter.name}
+            </div>
+          );
+        })}
+
         {city.levels.map((level, i) => {
           const complete = isLevelComplete(cityId, level.id);
-          const playable = level.status === 'playable';
+          const unlocked = isLevelUnlocked(cityId, level.id);
+          const playable = level.status === 'playable' && unlocked;
           const state = complete ? 'is-complete' : playable ? 'is-playable' : 'is-locked';
+          const reward = level.rewardVehicleId ? VEHICLES[level.rewardVehicleId] : null;
 
           return (
             <motion.div
@@ -143,7 +169,7 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
                   onClick={() => openLevel(level)}
                   onMouseEnter={() => sfx.play('hover')}
                   aria-label={`${level.name}. ${level.tagline}. ${
-                    complete ? 'Completed' : playable ? 'Ready to play' : 'Coming soon'
+                    complete ? 'Completed' : playable ? 'Ready to play' : 'Locked'
                   }`}
                 >
                   <span className="map-node__pill">
@@ -163,7 +189,15 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
                       complete ? 'is-done' : playable ? 'is-start' : 'is-soon'
                     }`}
                   >
-                    {complete ? '⭐ Completed' : playable ? `Level 0${level.index} · Start` : 'Coming soon'}
+                    {complete
+                      ? reward
+                        ? `${reward.icon} Completed`
+                        : '⭐ Completed'
+                      : playable
+                        ? `Level 0${level.index} · Start`
+                        : level.status === 'soon'
+                          ? 'Coming soon'
+                          : 'Locked'}
                   </span>
                 </button>
               </DwellTarget>
