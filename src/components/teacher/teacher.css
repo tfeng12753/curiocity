@@ -1,0 +1,142 @@
+.teacher {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 96px 28px 48px;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(255, 255, 255, 0.35), transparent 50%),
+    linear-gradient(180deg, #d8ecff 0%, #eef2ff 42%, #f7f4ff 100%);
+}
+
+.teacher__inner {
+  width: min(920px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 20px;
+}
+
+.teacher__hero {
+  padding: 28px 30px;
+  border-radius: var(--r-xl);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--panel-border);
+}
+
+.teacher__hero h1 {
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  margin-bottom: 8px;
+}
+
+.teacher__hero p {
+  color: var(--ink-soft);
+  font-weight: 600;
+  max-width: 52ch;
+}
+
+.teacher__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.teacher__stat {
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  background: var(--panel-soft);
+}
+
+.teacher__stat span {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.teacher__stat strong {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+}
+
+.teacher__city {
+  padding: 20px 22px;
+}
+
+.teacher__levels {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: grid;
+  gap: 8px;
+}
+
+.teacher__levels li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
+.teacher__levels li.is-done {
+  color: var(--ink);
+}
+
+.teacher__level-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.teacher__level-copy small {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-faint);
+}
+
+.teacher__status {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.teacher__badges {
+  padding: 22px 24px;
+}
+
+.teacher__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+}
+
+.teacher__actions p {
+  flex: 1 1 220px;
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.teacher__reset.is-confirming {
+  --btn-bg: var(--coral-500);
+  --btn-fg: #fff;
+  --btn-shadow: #d44a78;
+}
+
+@media (max-width: 640px) {
+  .teacher {
+    padding: 88px 16px 32px;
+  }
+
+  .teacher__stats {
+    grid-template-columns: 1fr;
+  }
+}
