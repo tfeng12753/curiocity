@@ -113,6 +113,96 @@ export function cutFromPoint(
   return { axis, t: snapping ? snap(clamped, candidates, 0.08) : clamped };
 }
 
+/** Whether a point lies on the food itself, rather than the surrounding board. */
+export function isInsideShape(kind: ShapeKind, point: { x: number; y: number }): boolean {
+  if (kind === 'circle') {
+    return Math.hypot(point.x - CIRCLE.cx, point.y - CIRCLE.cy) <= CIRCLE.r;
+  }
+  const { width, height } = SHAPE_METRICS[kind];
+  return (
+    point.x >= RECT_INSET &&
+    point.x <= width - RECT_INSET &&
+    point.y >= RECT_INSET &&
+    point.y <= height - RECT_INSET
+  );
+}
+
+export interface CutFromStrokeOptions {
+  allow: CutAxis[];
+  snapping?: boolean;
+  targets?: number[];
+  /** Rejects a wandering path that happens to start and end far apart. */
+  minStraightness?: number;
+}
+
+/**
+ * Turns a drawn stroke into a cut.
+ *
+ * This is the slicing counterpart to cutFromPoint. Pointing at a position and
+ * waiting is a poor fit for "cut the pizza": it asks a child to hold still in
+ * order to express an action that is inherently a movement, and it means the
+ * cut orientation has to be guessed from whatever the hand happened to be
+ * doing beforehand - which is why the old path had to keep a motion trail and
+ * still got the axis wrong when the finger paused (see the stale-axis note in
+ * FractionCanvas).
+ *
+ * A stroke carries the orientation directly: the direction you swiped *is* the
+ * direction of the cut, and where you swiped is where it lands. Nothing has to
+ * be inferred, and there is no hold to accidentally trigger.
+ */
+export function cutFromStroke(
+  kind: ShapeKind,
+  points: { x: number; y: number }[],
+  { allow, snapping = true, targets, minStraightness = 0.8 }: CutFromStrokeOptions,
+): Cut | null {
+  if (points.length < 2) return null;
+
+  const first = points[0];
+  const last = points[points.length - 1];
+  const dx = last.x - first.x;
+  const dy = last.y - first.y;
+  const span = Math.hypot(dx, dy);
+
+  const { width, height } = SHAPE_METRICS[kind];
+  // A real slice has to travel a decent share of the shape. Scaled to the
+  // shape so the same rule works for a tall square and a wide chocolate bar.
+  if (span < Math.min(width, height) * 0.4) return null;
+
+  let pathLength = 0;
+  for (let i = 1; i < points.length; i += 1) {
+    pathLength += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+  }
+  if (pathLength > 1e-6 && span / pathLength < minStraightness) return null;
+
+  // Only the part of the stroke actually over the food decides *where* the cut
+  // lands - the run-up and follow-through outside the shape would otherwise
+  // drag the position toward whichever edge the child started from.
+  const inside = points.filter((point) => isInsideShape(kind, point));
+  const sample = inside.length > 0 ? inside : points;
+
+  if (allow.includes('radial')) {
+    // The swipe direction is the cut line, so a horizontal swipe halves the
+    // pizza top from bottom.
+    const angle = foldAngle(Math.atan2(dy, dx));
+    return { axis: 'radial', t: snapping ? snap(angle, SNAP_ANGLES, 0.3) : angle };
+  }
+
+  const canV = allow.includes('v');
+  const canH = allow.includes('h');
+  if (!canV && !canH) return null;
+
+  // Swiping up/down leaves a vertical line behind it; swiping across leaves a
+  // horizontal one.
+  const axis: CutAxis = canV && canH ? (Math.abs(dy) > Math.abs(dx) ? 'v' : 'h') : canV ? 'v' : 'h';
+
+  const mean =
+    sample.reduce((total, point) => total + (axis === 'v' ? point.x : point.y), 0) / sample.length;
+  const raw = axis === 'v' ? mean / width : mean / height;
+  const clamped = Math.min(0.94, Math.max(0.06, raw));
+  const candidates = targets && targets.length > 0 ? targets : SNAP_POSITIONS;
+  return { axis, t: snapping ? snap(clamped, candidates, 0.1) : clamped };
+}
+
 /**
  * Whether a cut landed on one of its task's target marks - i.e. whether it
  * can still end up part of an equal split. Every cut is checked against this

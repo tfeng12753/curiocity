@@ -1,5 +1,7 @@
 import type { HandLandmarker } from '@mediapipe/tasks-vision';
 import { makeOneEuroFilter } from './oneEuro';
+import { makeIntentEstimator, type Kinematics } from './intent';
+import { arbiter } from './arbiter';
 
 /*
   The single source of truth for "where is the student pointing right now".
@@ -30,8 +32,19 @@ export interface CursorSample {
    * ("activate this"), not the specific gesture, so callers don't need to
    * know that it currently means "the hand just opened" (see
    * detectPalmOpen below) rather than, say, a poke.
+   *
+   * Note this is a *global* signal: it says the gesture happened, not what it
+   * applies to. Only the single arbiter-armed surface may act on it, which is
+   * what stops one palm-open from firing every target under the cursor.
    */
   activate: boolean;
+  /**
+   * Monotonically increasing frame counter. The arbiter uses it to group all
+   * of a frame's claims together before picking a winner.
+   */
+  seq: number;
+  /** Velocity, settle confidence and predicted landing point - see intent.ts. */
+  motion: Kinematics;
 }
 
 export interface TrackerState {
@@ -73,7 +86,26 @@ const cursorListeners = new Set<(sample: CursorSample) => void>();
 const stateListeners = new Set<(state: TrackerState) => void>();
 const dwellListeners = new Set<(progress: number) => void>();
 
-let cursor: CursorSample = { x: 0, y: 0, visible: false, source: 'pointer', pinching: false, activate: false };
+const AT_REST_MOTION: Kinematics = {
+  vx: 0,
+  vy: 0,
+  speed: 0,
+  settle: 1,
+  predictedX: 0,
+  predictedY: 0,
+};
+
+let cursor: CursorSample = {
+  x: 0,
+  y: 0,
+  visible: false,
+  source: 'pointer',
+  pinching: false,
+  activate: false,
+  seq: 0,
+  motion: AT_REST_MOTION,
+};
+let cursorSeq = 0;
 let state: TrackerState = {
   mode: 'pointer',
   status: 'idle',
@@ -93,6 +125,12 @@ let handMissingFrames = 0;
 const filterX = makeOneEuroFilter();
 const filterY = makeOneEuroFilter();
 
+// Intent is estimated from the *smoothed* position, not the raw landmark, so
+// sensor jitter cannot masquerade as velocity and keep `settle` pinned at 0
+// while the hand is actually holding still.
+const handIntent = makeIntentEstimator();
+const pointerIntent = makeIntentEstimator();
+
 // --- "open palm" commit gesture -----------------------------------------
 // A forward poke (jabbing the fingertip toward the camera) turned out to be
 // hard to do reliably - it relies on MediaPipe's z estimate, which is noisy
@@ -108,26 +146,59 @@ const filterY = makeOneEuroFilter();
 // exactly what changes when the hand opens. The thumb is left out: its
 // extension direction depends on hand rotation in a way the other fingers'
 // doesn't, and 3-of-4 is already a solid "the hand just opened" signal.
-const OPEN_WINDOW_MS = 400;
-const OPEN_COMMIT_COOLDOWN_MS = 500;
-const OPEN_FINGER_COUNT = 3;
-const EXTENDED_RATIO = 1.15;
-let opennessHistory: { open: boolean; t: number }[] = [];
+// The original thresholds were far too loose, and were the single biggest cause
+// of the interface selecting things nobody asked it to:
+//
+//   - "open" needed only 3 of 4 fingers extended, and "closed" was merely
+//     *not* open. A hand relaxing mid-movement swings between 1 and 4 extended
+//     fingers all by itself, so ordinary motion manufactured a rising edge -
+//     and therefore a commit - every few hundred milliseconds.
+//   - a single ratio decided extension in both directions, so a finger hovering
+//     near the threshold chattered between states frame to frame.
+//
+// Both are now hysteretic, and an open only counts when it follows a hand that
+// was *held* unambiguously closed. Pointing at something (index only) then
+// deliberately spreading all four fingers still passes easily; a hand that
+// merely goes slack on the way somewhere does not.
+const OPEN_LOOKBACK_MS = 600;
+/** A closed state must persist this long before an open can commit. */
+const CLOSED_HOLD_MS = 180;
+const OPEN_COMMIT_COOLDOWN_MS = 560;
+/** All four non-thumb fingers must be extended to read as "open". */
+const OPEN_FINGER_COUNT = 4;
+/** At most this many extended to read as "closed" - i.e. a fist or a point. */
+const CLOSED_FINGER_COUNT = 1;
+/** Hysteresis band: becoming extended is a higher bar than staying extended. */
+const EXTEND_ENTER_RATIO = 1.28;
+const EXTEND_EXIT_RATIO = 1.12;
+
+let opennessHistory: { open: boolean; closed: boolean; t: number }[] = [];
 let lastActivateAt = -Infinity;
+const extendedState = [false, false, false, false];
 
 function resetActivateDetector() {
   opennessHistory = [];
   lastActivateAt = -Infinity;
+  extendedState.fill(false);
+  pinching = false;
 }
 
+/**
+ * Whether finger `slot` reads as extended, with hysteresis around the previous
+ * answer so a borderline finger settles on one state instead of oscillating.
+ */
 function isFingerExtended(
+  slot: number,
   tip: { x: number; y: number },
   midJoint: { x: number; y: number },
   wrist: { x: number; y: number },
 ): boolean {
   const tipDist = Math.hypot(tip.x - wrist.x, tip.y - wrist.y);
   const jointDist = Math.hypot(midJoint.x - wrist.x, midJoint.y - wrist.y);
-  return tipDist > jointDist * EXTENDED_RATIO;
+  const ratio = jointDist > 1e-6 ? tipDist / jointDist : 0;
+  const threshold = extendedState[slot] ? EXTEND_EXIT_RATIO : EXTEND_ENTER_RATIO;
+  extendedState[slot] = ratio > threshold;
+  return extendedState[slot];
 }
 
 /** How many of the four non-thumb fingers are currently extended (0-4). */
@@ -139,27 +210,70 @@ function countExtendedFingers(landmarks: { x: number; y: number }[]): number {
     [16, 14], // ring
     [20, 18], // pinky
   ];
-  return pairs.reduce((count, [tip, joint]) => count + (isFingerExtended(landmarks[tip], landmarks[joint], wrist) ? 1 : 0), 0);
+  return pairs.reduce(
+    (count, [tip, joint], slot) =>
+      count + (isFingerExtended(slot, landmarks[tip], landmarks[joint], wrist) ? 1 : 0),
+    0,
+  );
 }
 
-/** Rising edge: the hand was closed/pointing a moment ago and is open now. */
+/**
+ * Rising edge: the hand was *held* unambiguously closed, and is now fully open.
+ * The held requirement is what separates a deliberate "release" gesture from a
+ * hand that happened to pass through a half-closed pose on its way somewhere.
+ */
 function detectPalmOpen(extendedCount: number, nowMs: number): boolean {
   const isOpen = extendedCount >= OPEN_FINGER_COUNT;
-  opennessHistory.push({ open: isOpen, t: nowMs });
-  while (opennessHistory.length > 1 && nowMs - opennessHistory[0].t > OPEN_WINDOW_MS) opennessHistory.shift();
-  if (nowMs - lastActivateAt < OPEN_COMMIT_COOLDOWN_MS) return false;
-
-  const wasClosed = opennessHistory.some((sample) => !sample.open);
-  if (isOpen && wasClosed) {
-    lastActivateAt = nowMs;
-    opennessHistory = [{ open: true, t: nowMs }];
-    return true;
+  const isClosed = extendedCount <= CLOSED_FINGER_COUNT;
+  opennessHistory.push({ open: isOpen, closed: isClosed, t: nowMs });
+  while (opennessHistory.length > 1 && nowMs - opennessHistory[0].t > OPEN_LOOKBACK_MS) {
+    opennessHistory.shift();
   }
-  return false;
+  if (nowMs - lastActivateAt < OPEN_COMMIT_COOLDOWN_MS) return false;
+  if (!isOpen) return false;
+
+  // Find the most recent contiguous run of closed samples and check it lasted
+  // long enough to have been intentional.
+  let runEnd: number | null = null;
+  let runStart: number | null = null;
+  for (let i = opennessHistory.length - 1; i >= 0; i -= 1) {
+    const sample = opennessHistory[i];
+    if (sample.closed) {
+      if (runEnd === null) runEnd = sample.t;
+      runStart = sample.t;
+    } else if (runEnd !== null) {
+      break;
+    }
+  }
+
+  const heldClosed = runStart !== null && runEnd !== null && runEnd - runStart >= CLOSED_HOLD_MS;
+  if (!heldClosed) return false;
+
+  lastActivateAt = nowMs;
+  opennessHistory = [{ open: true, closed: false, t: nowMs }];
+  return true;
 }
 
-function emitCursor(next: CursorSample) {
-  cursor = next;
+// Pinch is measured as index-tip-to-thumb-tip distance over palm length, so it
+// scales with hand size and camera distance without calibration. The old single
+// 0.55 threshold sat inside the range a naturally pointing hand already
+// occupies, so it reported a pinch that the student never made; these two
+// values bracket a deliberate pinch with a dead band in between.
+const PINCH_ENTER = 0.3;
+const PINCH_EXIT = 0.46;
+let pinching = false;
+
+function detectPinch(normalisedDistance: number): boolean {
+  pinching = normalisedDistance < (pinching ? PINCH_EXIT : PINCH_ENTER);
+  return pinching;
+}
+
+function emitCursor(next: Omit<CursorSample, 'seq'>) {
+  cursorSeq += 1;
+  cursor = { ...next, seq: cursorSeq };
+  // Closes the previous frame's target arbitration before any surface reacts to
+  // this sample, so each surface reads a decision made with every claim in.
+  arbiter.beginFrame();
   cursorListeners.forEach((listener) => listener(cursor));
 }
 
@@ -180,6 +294,10 @@ function onPointerMove(event: PointerEvent | MouseEvent) {
     source: 'pointer',
     pinching: false,
     activate: false,
+    // Pointer commits on click rather than on a hold, so this is not used for
+    // gating there - but the arbiter still needs a prediction to arm targets,
+    // and hover affordances read better when they anticipate the cursor too.
+    motion: pointerIntent.update(event.clientX, event.clientY, performance.now() / 1000),
   });
 }
 
@@ -262,9 +380,21 @@ function loop() {
     if (handMissingFrames > 6 && state.handVisible) {
       filterX.reset();
       filterY.reset();
+      handIntent.reset();
       resetActivateDetector();
       patchState({ handVisible: false });
-      emitCursor({ ...cursor, visible: false, source: 'hand', activate: false });
+      // Holds the last known position so the cursor fades out where the hand
+      // was rather than jumping, but carries nothing else over - seq is
+      // assigned by emitCursor and the motion estimate is no longer valid.
+      emitCursor({
+        x: cursor.x,
+        y: cursor.y,
+        visible: false,
+        source: 'hand',
+        pinching: false,
+        activate: false,
+        motion: AT_REST_MOTION,
+      });
     }
     return;
   }
@@ -284,13 +414,17 @@ function loop() {
   const handSpan = Math.hypot(wrist.x - landmarks[9].x, wrist.y - landmarks[9].y) || 0.2;
   const pinchDistance = Math.hypot(tip.x - thumb.x, tip.y - thumb.y);
 
+  const x = filterX.filter(rawX, now);
+  const y = filterY.filter(rawY, now);
+
   emitCursor({
-    x: filterX.filter(rawX, now),
-    y: filterY.filter(rawY, now),
+    x,
+    y,
     visible: true,
     source: 'hand',
-    pinching: pinchDistance / handSpan < 0.55,
+    pinching: detectPinch(pinchDistance / handSpan),
     activate: detectPalmOpen(countExtendedFingers(landmarks), now * 1000),
+    motion: handIntent.update(x, y, now),
   });
 }
 
@@ -389,6 +523,7 @@ export const tracker = {
     handMissingFrames = 0;
     filterX.reset();
     filterY.reset();
+    handIntent.reset();
     resetActivateDetector();
     cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(loop);

@@ -60,7 +60,9 @@
   --shadow-sm: 0 2px 6px rgba(36, 26, 86, 0.08);
   --shadow-md: 0 10px 24px rgba(36, 26, 86, 0.14);
   --shadow-lg: 0 22px 48px rgba(36, 26, 86, 0.2);
-  --shadow-pop: 0 10px 0 rgba(36, 26, 86, 0.16);
+  /* Kept for the few places that want a visible ledge, but shallow - see the
+     note on .btn in base.css about why the deep hard offsets were dropped. */
+  --shadow-pop: 0 3px 0 rgba(36, 26, 86, 0.14);
 
   /* Radius */
   --r-sm: 10px;

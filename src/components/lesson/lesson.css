@@ -54,12 +54,16 @@
   inset: 0;
 }
 
+/* Ambient only. These used to sit at 0.55 alpha and float up to 0.8, which put
+   half-legible fractions at roughly the same contrast as real content - the eye
+   kept going to them to check whether they mattered. They are atmosphere, so
+   they now stay clearly below the threshold of "something to read". */
 .workshop__symbols span {
   position: absolute;
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 2.4rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.3);
   animation: symbol-float 13s ease-in-out infinite;
 }
 
@@ -91,11 +95,11 @@
   0%,
   100% {
     transform: translateY(0) rotate(-4deg);
-    opacity: 0.45;
+    opacity: 0.3;
   }
   50% {
     transform: translateY(-26px) rotate(4deg);
-    opacity: 0.8;
+    opacity: 0.5;
   }
 }
 
@@ -186,13 +190,19 @@
   place-items: center;
 }
 
+/* The shape and Poly are centred together as one block. Previously the shape
+   was centred inside a full-height row with the dialogue pinned underneath it,
+   which pushed the two apart by however tall the window happened to be - on a
+   laptop that left the learning object marooned in the middle of an empty
+   field, with the instructions a long way from the thing they describe. */
 .task {
   width: min(1150px, 94vw);
   height: 100%;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
+  grid-template-rows: minmax(0, auto) auto;
+  align-content: center;
+  justify-items: center;
+  gap: 28px;
   padding-bottom: 22px;
 }
 
@@ -217,12 +227,17 @@
   flex-wrap: wrap;
 }
 
+/* Objective and progress read as one control rather than two pills competing
+   for the same spot above the shape: the count is tucked inside the chip. */
 .task__objective {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
+  gap: 0;
+  padding: 4px 4px 4px 0;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 16px rgba(36, 26, 86, 0.12);
 }
 
 .task__objective-chip {
@@ -234,23 +249,21 @@
   font-weight: 800;
   font-size: 1.02rem;
   letter-spacing: 0.06em;
-  box-shadow: 0 5px 0 var(--violet-700);
+  box-shadow: 0 2px 0 var(--violet-700);
 }
 
 .lesson--challenge .task__objective-chip {
   background: var(--sun-500);
   color: #4a3200;
-  box-shadow: 0 5px 0 #d68f11;
+  box-shadow: 0 2px 0 #d68f11;
 }
 
 .task__counter {
-  padding: 7px 16px;
-  border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.92);
+  padding: 0 16px;
   font-weight: 800;
   font-size: 0.82rem;
   color: var(--ink-soft);
-  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
 }
 
 .task__canvas-wrap {
@@ -359,24 +372,42 @@
   filter: drop-shadow(0 0 6px rgba(255, 194, 74, 0.9));
 }
 
+/* The live blade trail - the path the finger has actually swept, drawn so the
+   slice reads as a physical motion rather than appearing out of nowhere. */
+.slice-trail {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.95;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.85));
+}
+
 /* ------------------------------------------------------------- dialogue */
 
+/* Narrower and lighter than it was. A full-width opaque slab pinned across the
+   bottom split every scene into "picture up there, words down here" and ate the
+   room the learning object needed; this sits under the shape as part of the
+   same composition instead of as a second panel. */
 .dialogue {
   position: relative;
   display: flex;
   align-items: flex-end;
   gap: 4px;
-  width: min(940px, 96%);
+  width: min(780px, 96vw);
   margin: 0 auto;
-  padding: 18px 26px 18px 8px;
-  border-radius: var(--r-xl);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: var(--shadow-lg);
+  justify-self: center;
+  padding: 14px 24px 14px 8px;
+  border-radius: var(--r-lg);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 30px rgba(36, 26, 86, 0.16);
 }
 
 .dialogue__avatar {
   flex: 0 0 auto;
-  margin-top: -58px;
+  margin-top: -48px;
   margin-left: -6px;
   animation: bob 4.5s ease-in-out infinite;
 }
@@ -397,10 +428,12 @@
 
 .dialogue__text {
   margin-top: 2px;
-  font-size: 1.12rem;
+  font-size: 1.08rem;
   font-weight: 700;
   color: var(--ink);
-  min-height: 2.7em;
+  /* Two lines' worth, so the typewriter does not make the panel jump as it
+     types - but no longer three, which left a permanent empty band. */
+  min-height: 2.5em;
 }
 
 .dialogue__caret {

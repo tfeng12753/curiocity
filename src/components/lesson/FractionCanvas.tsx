@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { InteractiveSurface, type SurfacePoint } from '../../tracker/InteractiveSurface';
 import {
   buildRegions,
-  cutFromPoint,
+  cutFromStroke,
   cutGuideLine,
   isDuplicateCut,
+  isInsideShape,
   regionAt,
   SHAPE_METRICS,
   type Cut,
@@ -61,82 +62,69 @@ export function FractionCanvas({
 
   const [preview, setPreview] = useState<Cut | null>(null);
   const [hotRegion, setHotRegion] = useState<string | null>(null);
-  const trailRef = useRef<{ x: number; y: number; t: number }[]>([]);
+  const [strokePath, setStrokePath] = useState<string | null>(null);
 
   const atMaxCuts = cuts.length >= maxCuts;
+  const slicing = mode === 'cut' && !atMaxCuts;
 
-  const dominantAxis = (): 'x' | 'y' => {
-    const now = performance.now();
-    const trail = trailRef.current.filter((sample) => now - sample.t < 320);
-    if (trail.length < 2) return 'y';
-    const dx = Math.abs(trail[trail.length - 1].x - trail[0].x);
-    const dy = Math.abs(trail[trail.length - 1].y - trail[0].y);
-    return dx > dy * 1.25 ? 'x' : 'y';
-  };
+  const insideShape = useCallback(
+    (point: SurfacePoint) => isInsideShape(kind, point),
+    [kind],
+  );
 
   const handleHover = useCallback(
     (point: SurfacePoint | null) => {
       if (!point) {
-        setPreview(null);
         setHotRegion(null);
         return;
       }
-
-      if (mode === 'cut') {
-        trailRef.current.push({ x: point.x, y: point.y, t: performance.now() });
-        if (trailRef.current.length > 40) trailRef.current.shift();
-        if (atMaxCuts) {
-          setPreview(null);
-          return;
-        }
-        setPreview(cutFromPoint(kind, point, { allow, moveAxis: dominantAxis(), targets }));
-        return;
-      }
-
       if (mode === 'shade') {
         setHotRegion(regionAt(regions, kind, point)?.id ?? null);
       }
     },
-    [mode, kind, allow, targets, atMaxCuts, regions],
+    [mode, kind, regions],
+  );
+
+  // The stroke is drawn as it happens, so the child sees the blade following
+  // their finger and can tell that the cut lands where they swiped.
+  const handleStroke = useCallback(
+    (points: SurfacePoint[] | null) => {
+      if (!points || points.length < 2) {
+        setStrokePath(null);
+        setPreview(null);
+        return;
+      }
+      setStrokePath(points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' '));
+      // Preview the cut this stroke would produce if it were finished now.
+      setPreview(cutFromStroke(kind, points, { allow, targets }));
+    },
+    [kind, allow, targets],
+  );
+
+  const handleSlice = useCallback(
+    (points: SurfacePoint[]) => {
+      setStrokePath(null);
+      setPreview(null);
+      if (atMaxCuts) return;
+      const cut = cutFromStroke(kind, points, { allow, targets });
+      if (!cut || isDuplicateCut(cuts, cut)) return;
+      onCut?.(cut);
+    },
+    [kind, allow, targets, cuts, atMaxCuts, onCut],
   );
 
   const dwellKey = useCallback(
-    (point: SurfacePoint) => {
-      if (mode === 'cut') {
-        if (atMaxCuts) return null;
-        const cut = cutFromPoint(kind, point, { allow, moveAxis: dominantAxis(), targets });
-        if (!cut || isDuplicateCut(cuts, cut)) return null;
-        return `${cut.axis}:${Math.round(cut.t * 40)}`;
-      }
-      if (mode === 'shade') {
-        return regionAt(regions, kind, point)?.id ?? null;
-      }
-      return null;
-    },
-    [mode, kind, allow, targets, cuts, regions, atMaxCuts],
+    (point: SurfacePoint) => (mode === 'shade' ? (regionAt(regions, kind, point)?.id ?? null) : null),
+    [mode, kind, regions],
   );
 
   const handleCommit = useCallback(
     (point: SurfacePoint) => {
-      if (mode === 'cut') {
-        if (atMaxCuts) return;
-        // Reuse whatever the dashed guide line is already showing rather than
-        // recomputing the axis fresh: if the pointer paused before the click,
-        // the movement trail behind dominantAxis() can go stale between the
-        // last hover and this commit, letting the committed cut land on a
-        // different axis than the line the student was actually looking at.
-        const cut = preview ?? cutFromPoint(kind, point, { allow, moveAxis: dominantAxis(), targets });
-        if (!cut || isDuplicateCut(cuts, cut)) return;
-        onCut?.(cut);
-        setPreview(null);
-        return;
-      }
-      if (mode === 'shade') {
-        const region = regionAt(regions, kind, point);
-        if (region) onToggleRegion?.(region);
-      }
+      if (mode !== 'shade') return;
+      const region = regionAt(regions, kind, point);
+      if (region) onToggleRegion?.(region);
     },
-    [mode, kind, allow, targets, cuts, regions, atMaxCuts, onCut, onToggleRegion, preview],
+    [mode, kind, regions, onToggleRegion],
   );
 
   const guide = preview ? cutGuideLine(kind, preview) : null;
@@ -151,7 +139,11 @@ export function FractionCanvas({
         getDwellKey={dwellKey}
         onHover={handleHover}
         onCommit={handleCommit}
-        dwellMs={mode === 'cut' ? 950 : 750}
+        dwellMs={750}
+        sliceMode={slicing}
+        isInsideTarget={insideShape}
+        onSlice={handleSlice}
+        onStroke={handleStroke}
         className="fraction-canvas__surface"
         role="application"
         ariaLabel={caption ?? 'Interactive fraction shape'}
@@ -222,8 +214,11 @@ export function FractionCanvas({
               );
             })}
 
-            {/* skin decoration sits on top of the pieces, but only while whole */}
-            {!exploded && skin === 'pizza' && (
+            {/* Toppings ride on top of the pieces. They used to be hidden the
+                moment the shape exploded, which meant succeeding turned the
+                pizza into a plain yellow disc at exactly the moment it should
+                look most rewarding - so they stay put now. */}
+            {skin === 'pizza' && (
               <g opacity="0.85" style={{ pointerEvents: 'none' }}>
                 {[
                   [34, 32],
@@ -267,6 +262,13 @@ export function FractionCanvas({
               <line x1={guide.x1} y1={guide.y1} x2={guide.x2} y2={guide.y2} className="cut-guide__glow" />
               <line x1={guide.x1} y1={guide.y1} x2={guide.x2} y2={guide.y2} className="cut-guide__line" />
             </g>
+          )}
+
+          {/* The path the finger has actually travelled, so the slice reads as
+              a physical motion rather than an invisible one that only shows up
+              as a result. */}
+          {strokePath && (
+            <path d={strokePath} className="slice-trail" style={{ pointerEvents: 'none' }} />
           )}
         </svg>
       </InteractiveSurface>

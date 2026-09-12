@@ -65,7 +65,10 @@ button {
   letter-spacing: 0.01em;
   padding: 14px 30px;
   cursor: pointer;
-  box-shadow: 0 6px 0 var(--btn-shadow), var(--shadow-md);
+  /* A thin hard edge keeps the toy-like feel that suits the age group, but the
+     old 6px slab read as a stack of plastic blocks rather than a soft world -
+     most of the depth now comes from a real diffuse shadow instead. */
+  box-shadow: 0 2px 0 var(--btn-shadow), 0 8px 18px rgba(36, 26, 86, 0.16);
   transition: transform 0.16s var(--ease-pop), box-shadow 0.16s var(--ease-soft),
     filter 0.16s ease;
   white-space: nowrap;
@@ -73,13 +76,13 @@ button {
 
 .btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  filter: saturate(1.08);
-  box-shadow: 0 8px 0 var(--btn-shadow), var(--shadow-lg);
+  filter: saturate(1.06);
+  box-shadow: 0 3px 0 var(--btn-shadow), 0 14px 26px rgba(36, 26, 86, 0.22);
 }
 
 .btn:active:not(:disabled) {
-  transform: translateY(3px);
-  box-shadow: 0 2px 0 var(--btn-shadow), var(--shadow-sm);
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 var(--btn-shadow), 0 4px 10px rgba(36, 26, 86, 0.16);
 }
 
 .btn:disabled {

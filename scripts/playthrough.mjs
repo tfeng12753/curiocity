@@ -18,19 +18,37 @@ const click = async (text) => {
   await page.waitForTimeout(650);
 };
 
-/** Clicks inside the interactive shape at a fraction of its box. */
-async function tapShape(fx, fy, { drag } = {}) {
-  const box = await page.locator('.fraction-canvas__surface').first().boundingBox();
-  const x = box.x + box.width * fx;
-  const y = box.y + box.height * fy;
-  if (drag === 'x') {
-    await page.mouse.move(box.x + box.width * 0.15, y);
-    await page.mouse.move(box.x + box.width * 0.4, y, { steps: 6 });
-    await page.mouse.move(x, y, { steps: 6 });
-  } else {
-    await page.mouse.move(x, box.y + box.height * 0.05);
-    await page.mouse.move(x, y, { steps: 6 });
+const shapeBox = () => page.locator('.fraction-canvas__surface').first().boundingBox();
+
+/**
+ * Drags all the way through the shape, which is how cutting works now - a cut
+ * commits when the stroke crosses back out the far side. The path starts and
+ * ends inside the canvas but off the food itself, so it enters and exits.
+ */
+async function slice(path) {
+  const box = await shapeBox();
+  const at = ([fx, fy]) => [box.x + box.width * fx, box.y + box.height * fy];
+  const [sx, sy] = at(path[0]);
+  await page.mouse.move(sx, sy);
+  await page.mouse.down();
+  for (const point of path.slice(1)) {
+    const [x, y] = at(point);
+    await page.mouse.move(x, y, { steps: 8 });
   }
+  await page.mouse.up();
+  await page.waitForTimeout(750);
+}
+
+/** Sweeping down the shape leaves a vertical cut at this x. */
+const sliceV = (fx) => slice([[fx, 0.01], [fx, 0.4], [fx, 0.7], [fx, 0.99]]);
+
+/** Sweeping across the shape leaves a horizontal cut at this y. */
+const sliceH = (fy) => slice([[0.01, fy], [0.4, fy], [0.7, fy], [0.99, fy]]);
+
+/** Colouring a piece is still a plain click. */
+async function tapShape(fx, fy) {
+  const box = await shapeBox();
+  await page.mouse.move(box.x + box.width * fx, box.y + box.height * fy, { steps: 4 });
   await page.waitForTimeout(120);
   await page.mouse.down();
   await page.mouse.up();
@@ -65,7 +83,7 @@ await click('Continue with pointer');
 await shot('05-gate-dismissed');
 
 // Scene: split the pizza in two
-await tapShape(0.5, 0.2);
+await sliceV(0.5);
 await shot('06-halves');
 await click('Next');
 
@@ -74,15 +92,15 @@ await shot('07-notation-half');
 await click('Got it');
 
 // Scene: build 1/2 (cut, then shade one half)
-await tapShape(0.5, 0.2);
+await sliceV(0.5);
 await tapShape(0.25, 0.5);
 await shot('08-build-half');
 await click('Next');
 
 // Scene: chocolate bar into fourths
-await tapShape(0.25, 0.5);
-await tapShape(0.5, 0.5);
-await tapShape(0.75, 0.5);
+await sliceV(0.25);
+await sliceV(0.5);
+await sliceV(0.75);
 await shot('09-fourths');
 await click('Next');
 
@@ -90,8 +108,8 @@ await click('Next');
 await click('Got it');
 
 // Scene: square into four equal parts (one cut each way)
-await tapShape(0.5, 0.5);
-await tapShape(0.5, 0.5, { drag: 'x' });
+await sliceV(0.5);
+await sliceH(0.5);
 await shot('10-square-fourths');
 await click('Next');
 
@@ -115,22 +133,22 @@ await shot('13-summary');
 await click('Start the challenge');
 
 // Challenge 1: 1/2
-await tapShape(0.5, 0.2);
+await sliceV(0.5);
 await tapShape(0.25, 0.5);
 await shot('14-challenge-1');
 await click('Challenge 2');
 
 // Challenge 2: 1/4
-await tapShape(0.5, 0.5);
-await tapShape(0.5, 0.5, { drag: 'x' });
+await sliceV(0.5);
+await sliceH(0.5);
 await tapShape(0.25, 0.25);
 await shot('15-challenge-2');
 await click('Challenge 3');
 
 // Challenge 3: 3/4
-await tapShape(0.25, 0.5);
-await tapShape(0.5, 0.5);
-await tapShape(0.75, 0.5);
+await sliceV(0.25);
+await sliceV(0.5);
+await sliceV(0.75);
 await tapShape(0.12, 0.5);
 await tapShape(0.38, 0.5);
 await tapShape(0.62, 0.5);

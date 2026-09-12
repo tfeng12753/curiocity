@@ -250,8 +250,8 @@ export function FractionTask({
           <>
             <span className="dialogue__hint">
               {phase === 'cut'
-                ? 'Point where you want to cut, then open your hand (or click).'
-                : 'Point at a part, then open your hand (or click) to colour it.'}
+                ? 'Swipe your finger straight across the shape to slice it (or drag with the mouse).'
+                : 'Hold your finger still over a part to colour it (or click).'}
             </span>
             {mistakeCount >= 2 && (
               <button className="btn btn--ghost btn--sm" onClick={requestHint} disabled={hintLoading}>
