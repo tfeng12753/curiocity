@@ -1,9 +1,16 @@
 # Curio-City
 
-An explorable learning world for 5th–6th graders. Instead of a course catalogue,
-students fly into a world of subject cities, travel a game map, land on a
-destination, and **learn by doing** — cutting a pizza into halves with their own
-index finger in front of the webcam.
+An explorable learning world for elementary schoolers. Most educational software
+hands a kid a video or a wall of text and calls that a lesson — passive education,
+where the concept washes over a student rather than sinking in. Curio-City is
+built on the opposite bet: young kids grasp abstract ideas like fractions faster,
+and remember them longer, when they act the idea out themselves rather than watch
+someone else explain it. So instead of a course catalogue, students fly into a
+world of subject cities, travel a game map, land on a destination, and **learn by
+doing** — cutting a pizza into halves with their own index finger in front of the
+webcam. The goal is to make concepts that are normally taught abstractly
+accessible to young kids through hands-on engagement, not to cover more ground
+faster.
 
 The complete journey is playable:
 

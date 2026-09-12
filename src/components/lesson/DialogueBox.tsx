@@ -2,9 +2,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { Curio, type CurioMood } from '../curio/Curio';
 import { useVoiceover } from '../../hooks/useVoiceover';
+import { useSpeechToText } from '../../hooks/useSpeechToText';
 import { curio } from '../../ai/curio';
 import { sfx } from '../../audio/sound';
 import { useSettings } from '../../hooks/useSettings';
+import { DwellTarget } from '../../tracker/DwellTarget';
 
 interface DialogueBoxProps {
   text: string;
@@ -80,10 +82,9 @@ export function DialogueBox({ text, mood = 'idle', instruction, topic, children 
   const typed = useTypewriter(spoken);
   const { speaking, amplitude } = useVoiceover(spoken);
 
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const asked = question.trim();
-    if (!asked || thinking) return;
+  const ask = async (asked: string) => {
+    const trimmed = asked.trim();
+    if (!trimmed || thinking) return;
 
     pending.current?.abort();
     const controller = new AbortController();
@@ -92,7 +93,7 @@ export function DialogueBox({ text, mood = 'idle', instruction, topic, children 
     setThinking(true);
     setThinkingLine(THINKING_LINES[Math.floor(Math.random() * THINKING_LINES.length)]);
     sfx.play('tap');
-    const reply = await curio.ask(asked, topic ?? text);
+    const reply = await curio.ask(trimmed, topic ?? text);
     if (controller.signal.aborted) return;
 
     setThinking(false);
@@ -105,6 +106,49 @@ export function DialogueBox({ text, mood = 'idle', instruction, topic, children 
         "Oh no - my thinking cap has gone all wobbly! Ask me again in a minute and I bet it will have sorted itself out.",
     );
   };
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    void ask(question);
+  };
+
+  // Speaking the question is the primary path here, not a bonus on top of
+  // typing: the whole app is driven by pointing and gesture, and a keyboard
+  // is the one input a hands-only, camera-driven session cannot use at all.
+  // A final transcript submits itself - there is no reliable hands-free way
+  // to "confirm" typed text afterwards anyway.
+  const { supported: micSupported, listening, transcript, start: startListening, stop: stopListening } =
+    useSpeechToText({ onFinalResult: (result) => void ask(result) });
+
+  useEffect(() => {
+    if (listening) setQuestion(transcript);
+  }, [listening, transcript]);
+
+  const toggleMic = () => {
+    if (listening) {
+      stopListening();
+    } else {
+      sfx.play('tap');
+      startListening();
+    }
+  };
+
+  const openAsk = () => {
+    setAsking(true);
+  };
+
+  const closeAsk = () => {
+    stopListening();
+    setAsking(false);
+    setQuestion('');
+  };
+
+  const askAgain = () => {
+    setAnswer(null);
+    setAsking(true);
+  };
+
+  const backToLesson = () => setAnswer(null);
 
   return (
     <motion.div
@@ -135,50 +179,63 @@ export function DialogueBox({ text, mood = 'idle', instruction, topic, children 
 
         {asking ? (
           <form className="dialogue__ask" onSubmit={submit}>
+            {micSupported && (
+              <DwellTarget onActivate={toggleMic} dwellMs={650}>
+                <button
+                  type="button"
+                  className={`dialogue__mic ${listening ? 'is-listening' : ''}`}
+                  onClick={toggleMic}
+                  aria-label={listening ? 'Stop and ask' : 'Ask by speaking'}
+                >
+                  {listening ? '⏺️' : '🎙️'}
+                </button>
+              </DwellTarget>
+            )}
             <input
               ref={inputRef}
               className="dialogue__ask-input"
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
-              placeholder="Ask me anything at all..."
+              placeholder={listening ? 'Listening...' : 'Ask me anything at all...'}
               maxLength={200}
               aria-label="Ask Curio a question"
+              readOnly={listening}
             />
-            <button type="submit" className="btn btn--sm" disabled={!question.trim()}>
-              Ask
-            </button>
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              onClick={() => {
-                setAsking(false);
-                setQuestion('');
-              }}
-            >
-              Cancel
-            </button>
+            <DwellTarget onActivate={() => void ask(question)} dwellMs={650} disabled={!question.trim()}>
+              <button type="submit" className="btn btn--sm" disabled={!question.trim()}>
+                Ask
+              </button>
+            </DwellTarget>
+            <DwellTarget onActivate={closeAsk} dwellMs={650}>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={closeAsk}>
+                Cancel
+              </button>
+            </DwellTarget>
           </form>
         ) : (
           <div className="dialogue__actions">
             {answer ? (
               <>
-                <button className="btn btn--ghost btn--sm" onClick={() => setAsking(true)}>
-                  Ooh, another one
-                </button>
-                <button className="btn btn--sm" onClick={() => setAnswer(null)}>
-                  Back to the lesson →
-                </button>
+                <DwellTarget onActivate={askAgain}>
+                  <button className="btn btn--ghost btn--sm" onClick={askAgain}>
+                    Ooh, another one
+                  </button>
+                </DwellTarget>
+                <DwellTarget onActivate={backToLesson}>
+                  <button className="btn btn--sm" onClick={backToLesson}>
+                    Back to the lesson →
+                  </button>
+                </DwellTarget>
               </>
             ) : (
               <>
                 {children}
                 {!thinking && aiEnabled && (
-                  <button
-                    className="btn btn--ghost btn--sm dialogue__ask-open"
-                    onClick={() => setAsking(true)}
-                  >
-                    💬 Ask me anything
-                  </button>
+                  <DwellTarget onActivate={openAsk}>
+                    <button className="btn btn--ghost btn--sm dialogue__ask-open" onClick={openAsk}>
+                      🎙️ Ask me anything
+                    </button>
+                  </DwellTarget>
                 )}
               </>
             )}

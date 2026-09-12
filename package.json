@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "LEARNVERSE - an explorable learning world for 5th-6th graders, with a hand-tracked interactive fractions lesson.",
+  "description": "LEARNVERSE - an explorable learning world for elementary schoolers, with a hand-tracked interactive fractions lesson.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tfeng12753/curiocity.git"
