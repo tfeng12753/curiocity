@@ -10,6 +10,7 @@
   Mirrors sound.ts: small, and never allowed to break a lesson if it fails.
 */
 import { sfx } from './sound';
+import { speakable } from './speakable';
 
 const ENDPOINT = (import.meta.env.VITE_API_ENDPOINT ?? '/api').replace(/\/$/, '');
 const CACHE_LIMIT = 40;
@@ -245,12 +246,17 @@ async function playUrl(url: string, onAmplitude?: (level: number) => void, onEnd
 }
 
 export const voice = {
-  async speak(text: string, { voiceId, onAmplitude, onEnd }: SpeakOptions = {}) {
+  async speak(rawText: string, { voiceId, onAmplitude, onEnd }: SpeakOptions = {}) {
     stopPlayback();
-    if (sfx.isMuted() || !text.trim()) {
+    if (sfx.isMuted() || !rawText.trim()) {
       onEnd?.();
       return;
     }
+
+    // Everything past this point works on the spoken form, so the cache keys,
+    // the ElevenLabs request and the browser fallback all agree on one string
+    // - and "1/2" is never read out as "one slash two".
+    const text = speakable(rawText);
 
     const controller = new AbortController();
     currentController = controller;

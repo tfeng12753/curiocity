@@ -8,15 +8,29 @@ import { createServer } from 'node:http';
 
 const PORT = process.env.PORT ?? 8787;
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-// Curio is a cheerful, friendly female guide for 9-12 year olds. The previous
-// default was Rachel (21m00Tcm4TlvDq8ikWAM), a calm, measured narrator voice -
-// accurate and clear, but it read as a documentary rather than a playmate.
-// Elli is a brighter, younger, more animated female voice.
+// Curio is a cheerful, friendly female guide for 9-12 year olds.
 //
-// Voice IDs are specific to what is in your ElevenLabs Voice Library, so treat
-// this as a starting point: pick a voice there, copy its ID, and set
-// ELEVENLABS_VOICE_ID to override without touching code.
-const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? 'MF3mGyEYCl7XYWbV9V6O';
+// IMPORTANT, and the reason this list exists: on a free ElevenLabs plan the
+// API rejects *Voice Library* voices outright -
+//
+//   402 "Free users cannot use library voices via the API."
+//
+// That covers most of the famous ids, Rachel (21m00Tcm4TlvDq8ikWAM), Aria,
+// Domi and Charlotte among them, so picking a voice by name off a blog post
+// will silently cost you narration. Only the account's own default voices
+// work. These six are verified working on a free key:
+//
+//   Laura    FGY2WhTYpPnrIDTdsKH5  upbeat, quirky, young  <- Curio's default
+//   Jessica  cgSgspJ2msm6clMCkdW9  young, playful, expressive
+//   Matilda  XrExE9yKIg1WjnnlVkGX  friendly, warm
+//   Lily     pFZP5JQG7iQjIQuC4Bku  warm British
+//   Alice    Xb7hH8MSUJpSbSDYk0k2  confident British
+//   Sarah    EXAVITQu4vr4xnSDxMaL  soft, professional
+//
+// Set ELEVENLABS_VOICE_ID to override without touching code. If that override
+// turns out to be unusable, fetchSpeech falls back rather than going silent.
+const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? 'FGY2WhTYpPnrIDTdsKH5';
+const FALLBACK_VOICE_ID = 'cgSgspJ2msm6clMCkdW9';
 /** 0-1. Lower is more expressive and variable; higher is flatter and safer. */
 const VOICE_STABILITY = clamp01(process.env.ELEVENLABS_STABILITY, 0.35);
 /** 0-1. Exaggerates the voice's own character. Above ~0.5 gets unstable. */
@@ -52,8 +66,8 @@ function cacheSet(key, value) {
   cache.set(key, value);
 }
 
-async function fetchSpeech(text, voiceId) {
-  const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+async function requestSpeech(text, voiceId) {
+  return fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method: 'POST',
     headers: {
       'xi-api-key': ELEVENLABS_API_KEY,
@@ -79,6 +93,31 @@ async function fetchSpeech(text, voiceId) {
       },
     }),
   });
+}
+
+/**
+ * Remembers a voice that the account cannot actually use, so one bad
+ * ELEVENLABS_VOICE_ID costs a single failed request rather than one per line.
+ */
+let blockedVoiceId = null;
+
+async function fetchSpeech(text, requestedVoice) {
+  const voice = requestedVoice === blockedVoiceId ? FALLBACK_VOICE_ID : requestedVoice;
+  let response = await requestSpeech(text, voice);
+
+  // 401/402/404 here mean "this account may not use this voice" (a Voice
+  // Library voice on a free plan, a deleted id, a key without access) rather
+  // than "synthesis failed". Retrying the same voice would fail identically,
+  // so switch to one that is known to work and keep Curio talking.
+  if ([401, 402, 404].includes(response.status) && voice !== FALLBACK_VOICE_ID) {
+    const detail = await response.text().catch(() => '');
+    console.warn(
+      `[voice] voice ${voice} unusable (${response.status}: ${detail.slice(0, 160)}). ` +
+        `Falling back to ${FALLBACK_VOICE_ID} for the rest of this process.`,
+    );
+    blockedVoiceId = voice;
+    response = await requestSpeech(text, FALLBACK_VOICE_ID);
+  }
 
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
