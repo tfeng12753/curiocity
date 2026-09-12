@@ -66,17 +66,33 @@ function snap(value: number, candidates: number[], tolerance: number) {
   return best;
 }
 
+/**
+ * The exact positions a v/h task's cuts must land on for the finished shape
+ * to come out equal. A mixed-axis task with exactly two cuts is a "grid" -
+ * one cut per axis, straight through the middle. Everything else is equally
+ * spaced strips along a single axis: `requiredCuts` cuts make
+ * `requiredCuts + 1` equal parts.
+ */
+export function targetFractions(allow: CutAxis[] | undefined, requiredCuts: number): number[] {
+  if (!allow || allow.includes('radial')) return [];
+  if (allow.includes('v') && allow.includes('h') && requiredCuts === 2) return [0.5];
+  const n = requiredCuts + 1;
+  return Array.from({ length: Math.max(0, requiredCuts) }, (_, i) => (i + 1) / n);
+}
+
 export interface CutFromPointOptions {
   allow: CutAxis[];
   /** Dominant direction of recent movement, used to choose cut orientation. */
   moveAxis?: 'x' | 'y';
   snapping?: boolean;
+  /** Positions to snap onto - from targetFractions - instead of the generic grid. */
+  targets?: number[];
 }
 
 export function cutFromPoint(
   kind: ShapeKind,
   point: { x: number; y: number },
-  { allow, moveAxis = 'y', snapping = true }: CutFromPointOptions,
+  { allow, moveAxis = 'y', snapping = true, targets }: CutFromPointOptions,
 ): Cut | null {
   const { width, height } = SHAPE_METRICS[kind];
 
@@ -93,7 +109,20 @@ export function cutFromPoint(
   const axis: CutAxis = canV && canH ? (moveAxis === 'x' ? 'h' : 'v') : canV ? 'v' : 'h';
   const raw = axis === 'v' ? point.x / width : point.y / height;
   const clamped = Math.min(0.94, Math.max(0.06, raw));
-  return { axis, t: snapping ? snap(clamped, SNAP_POSITIONS, 0.08) : clamped };
+  const candidates = targets && targets.length > 0 ? targets : SNAP_POSITIONS;
+  return { axis, t: snapping ? snap(clamped, candidates, 0.08) : clamped };
+}
+
+/**
+ * Whether a cut landed on one of its task's target marks - i.e. whether it
+ * can still end up part of an equal split. Every cut is checked against this
+ * the moment it's made, not just the last one, so a child can never lock in
+ * an off-mark cut early and find the shape impossible to finish.
+ */
+export function isCutOnTarget(allow: CutAxis[] | undefined, requiredCuts: number, cut: Cut) {
+  if (cut.axis === 'radial') return true;
+  const targets = targetFractions(allow, requiredCuts);
+  return targets.length === 0 || targets.includes(cut.t);
 }
 
 export function isDuplicateCut(cuts: Cut[], candidate: Cut) {

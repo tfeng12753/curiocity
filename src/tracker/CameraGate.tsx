@@ -7,16 +7,45 @@ import './tracker.css';
 
 type Phase = 'ask' | 'starting' | 'ready' | 'failed';
 
+/**
+ * A hand pointing with the index finger. The finger is set apart from the
+ * folded ones and to one side, deliberately asymmetric, so it can never be
+ * mistaken for a single raised digit.
+ */
 function HandIllustration() {
   return (
     <svg viewBox="0 0 120 120" width="104" height="104" aria-hidden="true">
-      <g>
-        <rect x="50" y="18" width="20" height="54" rx="10" fill="#ffd6b8" />
-        <rect x="50" y="18" width="20" height="54" rx="10" fill="none" stroke="#e8a878" strokeWidth="2" />
-        <rect x="32" y="44" width="18" height="46" rx="9" fill="#ffc9a4" stroke="#e8a878" strokeWidth="2" />
-        <rect x="68" y="44" width="18" height="46" rx="9" fill="#ffc9a4" stroke="#e8a878" strokeWidth="2" />
-        <rect x="42" y="60" width="38" height="42" rx="18" fill="#ffd6b8" stroke="#e8a878" strokeWidth="2" />
-        <circle cx="60" cy="16" r="8" fill="var(--sun-500)" opacity="0.85" />
+      {/* palm */}
+      <rect x="34" y="58" width="48" height="46" rx="19" fill="#ffd6b8" stroke="#e8a878" strokeWidth="2" />
+
+      {/* three folded fingers, stacked along the knuckle line */}
+      <g stroke="#e8a878" strokeWidth="2" strokeLinejoin="round">
+        <rect x="54" y="40" width="30" height="15" rx="7.5" fill="#ffc9a4" />
+        <rect x="54" y="53" width="32" height="15" rx="7.5" fill="#ffc9a4" />
+        <rect x="54" y="66" width="29" height="15" rx="7.5" fill="#ffc9a4" />
+      </g>
+
+      {/* the pointing index finger, offset to the left of the folded stack */}
+      <rect x="28" y="14" width="19" height="50" rx="9.5" fill="#ffd6b8" stroke="#e8a878" strokeWidth="2" />
+
+      {/* thumb, tucked across the front of the fist */}
+      <rect
+        x="20"
+        y="70"
+        width="26"
+        height="15"
+        rx="7.5"
+        fill="#ffc9a4"
+        stroke="#e8a878"
+        strokeWidth="2"
+        transform="rotate(-25 33 77)"
+      />
+
+      {/* a little sparkle at the fingertip to read as "tap here" */}
+      <g stroke="var(--sun-500)" strokeWidth="4" strokeLinecap="round" opacity="0.9">
+        <path d="M37 10 L37 2" />
+        <path d="M24 16 L18 10" />
+        <path d="M50 14 L54 6" />
       </g>
     </svg>
   );

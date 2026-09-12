@@ -102,11 +102,11 @@ export function FractionLesson({ onExit, onKeepExploring }: FractionLessonProps)
           <FractionTask
             kind="rect"
             skin="chocolate"
-            allow={['v']}
+            allow={['v', 'h']}
             requiredCuts={3}
             objective="MAKE 4 EQUAL PARTS"
             askLine="What if we want to share our chocolate with four friends? Can we divide the whole into four equal parts?"
-            cutInstruction="Make 3 cuts so the bar has 4 equal parts."
+            cutInstruction="Make 3 cuts so the bar has 4 equal parts - across or down, your choice."
             successLine="Four equal parts! Each one of these is called a fourth."
             successLabel="4 EQUAL PARTS · FOURTHS"
             explodeOnSuccess
@@ -242,12 +242,12 @@ export function FractionLesson({ onExit, onKeepExploring }: FractionLessonProps)
           <FractionTask
             key="challenge-3"
             kind="rect"
-            allow={['v']}
+            allow={['v', 'h']}
             requiredCuts={3}
             requiredShaded={3}
             objective="CHALLENGE 3 / 3 · MAKE 3/4"
             askLine="Last challenge! Divide the bar into four equal parts, then colour three of them."
-            cutInstruction="Make 3 cuts for 4 equal parts."
+            cutInstruction="Make 3 cuts for 4 equal parts - across or down, your choice."
             shadeInstruction="Colour 3 of the 4 parts."
             successLine="Three out of four equal parts - that is 3/4!"
             successLabel="CHALLENGE 3 COMPLETE"

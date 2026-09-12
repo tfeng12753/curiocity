@@ -29,6 +29,8 @@ interface FractionCanvasProps {
   shaded?: string[];
   allow?: CutAxis[];
   maxCuts?: number;
+  /** Positions cuts should snap onto - see targetFractions. */
+  targets?: number[];
   exploded?: boolean;
   nudge?: boolean;
   size?: number;
@@ -45,6 +47,7 @@ export function FractionCanvas({
   shaded = [],
   allow = kind === 'circle' ? ['radial'] : ['v'],
   maxCuts = 3,
+  targets,
   exploded = false,
   nudge = false,
   size = 340,
@@ -86,7 +89,7 @@ export function FractionCanvas({
           setPreview(null);
           return;
         }
-        setPreview(cutFromPoint(kind, point, { allow, moveAxis: dominantAxis() }));
+        setPreview(cutFromPoint(kind, point, { allow, moveAxis: dominantAxis(), targets }));
         return;
       }
 
@@ -94,14 +97,14 @@ export function FractionCanvas({
         setHotRegion(regionAt(regions, kind, point)?.id ?? null);
       }
     },
-    [mode, kind, allow, atMaxCuts, regions],
+    [mode, kind, allow, targets, atMaxCuts, regions],
   );
 
   const dwellKey = useCallback(
     (point: SurfacePoint) => {
       if (mode === 'cut') {
         if (atMaxCuts) return null;
-        const cut = cutFromPoint(kind, point, { allow, moveAxis: dominantAxis() });
+        const cut = cutFromPoint(kind, point, { allow, moveAxis: dominantAxis(), targets });
         if (!cut || isDuplicateCut(cuts, cut)) return null;
         return `${cut.axis}:${Math.round(cut.t * 40)}`;
       }
@@ -110,14 +113,14 @@ export function FractionCanvas({
       }
       return null;
     },
-    [mode, kind, allow, cuts, regions, atMaxCuts],
+    [mode, kind, allow, targets, cuts, regions, atMaxCuts],
   );
 
   const handleCommit = useCallback(
     (point: SurfacePoint) => {
       if (mode === 'cut') {
         if (atMaxCuts) return;
-        const cut = cutFromPoint(kind, point, { allow, moveAxis: dominantAxis() });
+        const cut = cutFromPoint(kind, point, { allow, moveAxis: dominantAxis(), targets });
         if (!cut || isDuplicateCut(cuts, cut)) return;
         onCut?.(cut);
         setPreview(null);
@@ -128,7 +131,7 @@ export function FractionCanvas({
         if (region) onToggleRegion?.(region);
       }
     },
-    [mode, kind, allow, cuts, regions, atMaxCuts, onCut, onToggleRegion],
+    [mode, kind, allow, targets, cuts, regions, atMaxCuts, onCut, onToggleRegion],
   );
 
   const guide = preview ? cutGuideLine(kind, preview) : null;

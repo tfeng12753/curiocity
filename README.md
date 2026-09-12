@@ -149,21 +149,34 @@ npm run dev                          # the Vite dev server proxies /api to it
 In production the two halves are separate Render services (see
 `render.yaml`): the static site gets a build-time `VITE_VOICE_ENDPOINT`
 pointing at the proxy's URL, and the proxy gets `ELEVENLABS_API_KEY` (and
-optionally `ELEVENLABS_VOICE_ID`) set as secrets in the Render dashboard —
-they're marked `sync: false` in the blueprint, so nothing sensitive lives in
-the repo.
+optionally `ELEVENLABS_VOICE_ID`) set as secrets in the Render dashboard.
+
+**Important:** `render.yaml`'s `headers`, `envVars`, and the second service
+only take effect if Render deployed this repo via **New → Blueprint**. If the
+static site was instead created by hand (**New → Static Site**), Render still
+auto-deploys on every push but silently ignores everything else in
+`render.yaml` — in that case set `VITE_VOICE_ENDPOINT` and the
+`Permissions-Policy` header directly in that service's dashboard, and create
+the proxy as its own **New → Web Service** pointed at the `server/` directory
+(root directory `server`, build command `npm ci`, start command `npm start`),
+copying `ELEVENLABS_API_KEY` / `ELEVENLABS_VOICE_ID` / `ALLOWED_ORIGIN` into
+its Environment tab.
 
 ## Deploying
 
 This is a static build, so any static host works. `render.yaml` at the repo root
-is a Render blueprint — point Render at the repository and it picks the settings
-up automatically. To configure a static site by hand instead:
+is a Render blueprint — deploy it via **New → Blueprint** (not **New → Static
+Site**) and Render picks every setting below up automatically, including the
+optional voice proxy above. To configure a static site by hand instead:
 
 | Setting           | Value                    |
 | ----------------- | ------------------------ |
 | Build command     | `npm ci && npm run build` |
 | Publish directory | `dist`                   |
 | Rewrite rule      | `/*` → `/index.html`     |
+
+A hand-configured site also needs its `Permissions-Policy: camera=(self)`
+header (Settings → Headers) added manually — `render.yaml` won't set it for you.
 
 The app keeps every scene on a single page, so the rewrite is a safety net rather
 than a requirement today — it keeps unknown paths landing on the app instead of a

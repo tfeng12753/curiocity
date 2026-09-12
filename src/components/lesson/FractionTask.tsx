@@ -8,6 +8,8 @@ import { DialogueBox } from './DialogueBox';
 import {
   areEqualParts,
   buildRegions,
+  isCutOnTarget,
+  targetFractions,
   type Cut,
   type CutAxis,
   type Region,
@@ -64,23 +66,25 @@ export function FractionTask({
   const [phase, setPhase] = useState<Phase>(requiredCuts > 0 ? 'cut' : 'shade');
   const [nudge, setNudge] = useState(false);
   const [line, setLine] = useState(askLine);
-  const retryTimer = useRef<number | undefined>(undefined);
+  const retryTimers = useRef<number[]>([]);
 
   const cutsToGo = Math.max(0, requiredCuts - cuts.length);
   const regions = useMemo(() => buildRegions(kind, cuts), [kind, cuts]);
+  const targets = useMemo(() => targetFractions(allow, requiredCuts), [allow, requiredCuts]);
 
-  // When a shape needs one cut each way, lock the next cut to the axis that is
-  // still missing - a child aiming roughly at the middle then always succeeds.
+  // Once a shape has both axes allowed, the first cut decides how the rest
+  // must go. Exactly two cuts is a "grid" - one cut per axis, so the next one
+  // locks to whichever axis is still missing. Anything else is equally spaced
+  // strips along a single axis, so the next one locks to match the first.
   const effectiveAllow = useMemo(() => {
     if (!allow || allow.length < 2) return allow;
-    const hasV = cuts.some((cut) => cut.axis === 'v');
-    const hasH = cuts.some((cut) => cut.axis === 'h');
-    if (hasV && !hasH) return ['h' as CutAxis];
-    if (hasH && !hasV) return ['v' as CutAxis];
-    return allow;
-  }, [allow, cuts]);
+    const usedAxis = cuts.find((cut) => cut.axis === 'v' || cut.axis === 'h')?.axis;
+    if (!usedAxis) return allow;
+    if (requiredCuts === 2) return [usedAxis === 'v' ? 'h' : 'v'] as CutAxis[];
+    return [usedAxis] as CutAxis[];
+  }, [allow, cuts, requiredCuts]);
 
-  useEffect(() => () => window.clearTimeout(retryTimer.current), []);
+  useEffect(() => () => retryTimers.current.forEach(window.clearTimeout), []);
 
   const finish = () => {
     setPhase('done');
@@ -88,9 +92,32 @@ export function FractionTask({
     sfx.play('success');
   };
 
+  // No red error, no answer given away - the cut is shown, the shape wobbles,
+  // and it's quietly taken back so the child can try that one again. This now
+  // runs on every cut, not just the last, so an early miss can never leave
+  // the shape unfinishable by the time the required count is reached.
+  const rejectCut = (cut: Cut) => {
+    setNudge(true);
+    setLine(retryLine);
+    sfx.play('retry');
+    retryTimers.current.push(
+      window.setTimeout(() => {
+        setCuts((current) => current.filter((entry) => entry !== cut));
+        setNudge(false);
+        setLine(askLine);
+      }, 1300),
+    );
+  };
+
   const handleCut = (cut: Cut) => {
     const next = [...cuts, cut];
     setCuts(next);
+
+    if (!isCutOnTarget(allow, requiredCuts, cut)) {
+      rejectCut(cut);
+      return;
+    }
+
     sfx.play('cut');
 
     if (next.length < requiredCuts) {
@@ -109,15 +136,8 @@ export function FractionTask({
       return;
     }
 
-    // Wrong split: no red error, no answer given away - just take the cut back.
-    setNudge(true);
-    setLine(retryLine);
-    sfx.play('retry');
-    retryTimer.current = window.setTimeout(() => {
-      setCuts(next.slice(0, -1));
-      setNudge(false);
-      setLine(askLine);
-    }, 1300);
+    // Safety net - every cut was on-target but the split still isn't equal.
+    rejectCut(cut);
   };
 
   const handleToggleRegion = (region: Region) => {
@@ -175,6 +195,7 @@ export function FractionTask({
             shaded={shaded}
             allow={effectiveAllow}
             maxCuts={requiredCuts}
+            targets={targets}
             exploded={phase === 'done' && explodeOnSuccess}
             nudge={nudge}
             size={size}
