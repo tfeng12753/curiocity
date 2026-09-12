@@ -152,6 +152,10 @@ export function CameraGate({ onDone }: { onDone: () => void }) {
   };
 
   const usePointer = () => {
+    // Safe even if the camera never started or already stopped on error -
+    // this just guarantees a running hand-tracking loop never keeps firing
+    // cursor samples after the student has switched back to their mouse.
+    tracker.stopCamera();
     tracker.usePointer();
     tracker.markOnboarded();
     sfx.play('tap');
@@ -248,36 +252,3 @@ export function CameraGate({ onDone }: { onDone: () => void }) {
   );
 }
 
-export function CameraPip() {
-  const { mode, handVisible, status } = useTrackerState();
-  const [videoEl] = useState(() => tracker.getVideo());
-
-  useEffect(() => {
-    const host = document.getElementById('camera-pip-slot');
-    const source = tracker.getVideo();
-    if (!host || !source) return;
-    const clone = document.createElement('video');
-    clone.autoplay = true;
-    clone.muted = true;
-    clone.playsInline = true;
-    clone.srcObject = source.srcObject;
-    host.appendChild(clone);
-    void clone.play();
-    return () => {
-      clone.srcObject = null;
-      clone.remove();
-    };
-  }, [videoEl, status]);
-
-  if (mode !== 'hand' || status !== 'ready') return null;
-
-  return (
-    <div className="camera-pip">
-      <div id="camera-pip-slot" />
-      <span className="camera-pip__label">
-        <i className={`camera-pip__dot ${handVisible ? '' : 'is-waiting'}`} />
-        {handVisible ? 'Finger tracking' : 'Show your hand'}
-      </span>
-    </div>
-  );
-}

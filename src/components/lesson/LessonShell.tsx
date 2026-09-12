@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { sfx } from '../../audio/sound';
-import { CameraGate, CameraPip } from '../../tracker/CameraGate';
+import { CameraGate } from '../../tracker/CameraGate';
+import { CameraStage } from '../../tracker/CameraStage';
+import { AirTrail } from '../../tracker/AirTrail';
 import { tracker } from '../../tracker/trackerStore';
 import { useTrackerState } from '../../tracker/useTracker';
 import { WorkshopBackdrop } from './WorkshopBackdrop';
@@ -36,6 +38,7 @@ export function LessonShell({ pathLabel, scenes, onExit }: LessonShellProps) {
   const isChallenge = Boolean(scene.challenge);
   const isComplete = scene.id === 'complete';
   const showGate = gateOpen && index >= 1 && !isComplete;
+  const cameraActive = mode === 'hand' && status === 'ready';
 
   useEffect(() => {
     return () => tracker.setDwell(0);
@@ -46,9 +49,15 @@ export function LessonShell({ pathLabel, scenes, onExit }: LessonShellProps) {
     setIndex((current) => Math.min(current + 1, scenes.length - 1));
   };
 
+  const backToPointer = () => {
+    tracker.stopCamera();
+    tracker.usePointer();
+    sfx.play('tap');
+  };
+
   return (
     <motion.div
-      className={`lesson ${isChallenge ? 'lesson--challenge' : ''}`}
+      className={`lesson ${isChallenge ? 'lesson--challenge' : ''} ${cameraActive ? 'lesson--camera' : ''}`}
       data-city="math"
       initial={{ opacity: 0, scale: 1.06 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -56,6 +65,8 @@ export function LessonShell({ pathLabel, scenes, onExit }: LessonShellProps) {
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
       <WorkshopBackdrop challenge={isChallenge} />
+      {cameraActive && <CameraStage />}
+      {cameraActive && <AirTrail />}
 
       {!isComplete && (
         <header className="lesson__hud">
@@ -74,12 +85,13 @@ export function LessonShell({ pathLabel, scenes, onExit }: LessonShellProps) {
           </div>
 
           <div className="lesson__tools">
-            <CameraPip />
             <div className="lesson__tool-buttons">
-              <span className="pill">
-                {mode === 'hand' && status === 'ready' ? '✋ Finger' : '🖱️ Pointer'} mode
-              </span>
-              {mode !== 'hand' && (
+              <span className="pill">{cameraActive ? '✋ Finger' : '🖱️ Pointer'} mode</span>
+              {cameraActive ? (
+                <button className="btn btn--ghost btn--sm" onClick={backToPointer}>
+                  Use pointer
+                </button>
+              ) : (
                 <button className="btn btn--ghost btn--sm" onClick={() => setGateOpen(true)}>
                   Use camera
                 </button>

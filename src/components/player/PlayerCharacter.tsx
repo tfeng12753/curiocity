@@ -9,14 +9,27 @@ const BODY_COLORS: Record<string, { body: string; edge: string }> = {
 export interface PlayerCharacterProps {
   size?: number;
   equipped: Partial<Record<'color' | 'hat' | 'accessory', CosmeticId>>;
+  /**
+   * Raises one arm so the hand reaches up and to the right, with the
+   * fingertip landing on HAND_ANCHOR. Used when the character is acting as
+   * the cursor: the hand is what actually touches things, so it - not the
+   * middle of the body - is what gets placed on the tracked point.
+   */
+  pointing?: boolean;
 }
+
+/**
+ * Where the pointing fingertip sits, as a fraction of the rendered box.
+ * The cursor uses this to line the hand up with the tracked point.
+ */
+export const HAND_ANCHOR = { x: 0.96, y: 0.213 };
 
 /**
  * The player's own character - one base body with swappable colour/hat/
  * accessory cosmetics. Shares its visual family with the Curio-City logo
  * mark (rounded body, big curious eyes) so it reads as the same world.
  */
-export function PlayerCharacter({ size = 96, equipped }: PlayerCharacterProps) {
+export function PlayerCharacter({ size = 96, equipped, pointing = false }: PlayerCharacterProps) {
   const colorId = equipped.color ?? 'color-violet';
   const hatId = equipped.hat ?? 'hat-antenna';
   const accessoryId = equipped.accessory;
@@ -48,6 +61,59 @@ export function PlayerCharacter({ size = 96, equipped }: PlayerCharacterProps) {
           <circle cx="60" cy="-4" r="5" fill="#ffd678" stroke="#f0a41d" strokeWidth="1.5" />
           <circle cx="45" cy="20" r="2.4" fill="#fff" opacity="0.85" />
           <circle cx="53" cy="10" r="2.4" fill="#fff" opacity="0.85" />
+        </g>
+      )}
+
+      {/* left arm - always relaxed at the side */}
+      <path
+        d="M24 48 C14 52 9 60 10 72"
+        fill="none"
+        stroke={palette.edge}
+        strokeWidth="9"
+        strokeLinecap="round"
+      />
+      <circle cx="10" cy="74" r="6.4" fill={palette.body} stroke={palette.edge} strokeWidth="2.4" />
+
+      {pointing ? (
+        /* right arm - reaches up and to the right, fingertip at HAND_ANCHOR (96, ~14) */
+        <g>
+          <path
+            d="M76 46 C86 40 92 30 94 18"
+            fill="none"
+            stroke={palette.edge}
+            strokeWidth="9"
+            strokeLinecap="round"
+          />
+          {/* pointing hand: a small fist with the index finger extended toward the anchor */}
+          <circle cx="94" cy="20" r="6.6" fill={palette.body} stroke={palette.edge} strokeWidth="2.4" />
+          <path
+            d="M95 20 L96.5 13.5"
+            fill="none"
+            stroke={palette.body}
+            strokeWidth="4.4"
+            strokeLinecap="round"
+          />
+          <path
+            d="M95 20 L96.5 13.5"
+            fill="none"
+            stroke={palette.edge}
+            strokeWidth="4.4"
+            strokeLinecap="round"
+            opacity="0.001"
+          />
+          <circle cx="96.5" cy="13" r="2.6" fill={palette.body} stroke={palette.edge} strokeWidth="2" />
+        </g>
+      ) : (
+        /* right arm - relaxed at the side, mirroring the left */
+        <g>
+          <path
+            d="M76 48 C86 52 91 60 90 72"
+            fill="none"
+            stroke={palette.edge}
+            strokeWidth="9"
+            strokeLinecap="round"
+          />
+          <circle cx="90" cy="74" r="6.4" fill={palette.body} stroke={palette.edge} strokeWidth="2.4" />
         </g>
       )}
 

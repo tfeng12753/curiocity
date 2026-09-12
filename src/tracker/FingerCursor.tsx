@@ -92,8 +92,8 @@ export function FingerCursor({ active }: { active: boolean }) {
           }}
         />
       </svg>
-      <div className="finger-cursor__character">
-        <PlayerCharacter size={34} equipped={equippedCosmetics} />
+      <div className={`finger-cursor__character ${mode === 'hand' ? 'is-pointing' : ''}`}>
+        <PlayerCharacter size={34} equipped={equippedCosmetics} pointing={mode === 'hand'} />
       </div>
     </div>
   );
