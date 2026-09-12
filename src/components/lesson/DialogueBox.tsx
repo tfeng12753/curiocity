@@ -71,6 +71,7 @@ export function DialogueBox({ text, mood = 'idle', instruction, topic, children 
     setAsking(false);
     setQuestion('');
     pending.current?.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text]);
 
   useEffect(() => () => pending.current?.abort(), []);
@@ -112,29 +113,31 @@ export function DialogueBox({ text, mood = 'idle', instruction, topic, children 
     void ask(question);
   };
 
-  // Speaking the question is the primary path here, not a bonus on top of
-  // typing: the whole app is driven by pointing and gesture, and a keyboard
-  // is the one input a hands-only, camera-driven session cannot use at all.
-  // A final transcript submits itself - there is no reliable hands-free way
-  // to "confirm" typed text afterwards anyway.
-  const { supported: micSupported, listening, transcript, start: startListening, stop: stopListening } =
-    useSpeechToText({ onFinalResult: (result) => void ask(result) });
+  // Talking is the *only* path when the browser supports it - not a mic
+  // bonus bolted onto a typing form. A child taps one button and speaks;
+  // there is no keyboard step in between to trip over. A final transcript
+  // submits itself, since there is no reliable hands-free way to "confirm"
+  // typed text afterwards anyway.
+  const {
+    supported: micSupported,
+    starting: micStarting,
+    listening,
+    transcript,
+    start: startListening,
+    stop: stopListening,
+  } = useSpeechToText({ onFinalResult: (result) => void ask(result) });
 
-  useEffect(() => {
-    if (listening) setQuestion(transcript);
-  }, [listening, transcript]);
-
-  const toggleMic = () => {
-    if (listening) {
-      stopListening();
-    } else {
+  const openAsk = () => {
+    setAsking(true);
+    if (micSupported) {
       sfx.play('tap');
       startListening();
     }
   };
 
-  const openAsk = () => {
-    setAsking(true);
+  const retryListening = () => {
+    sfx.play('tap');
+    startListening();
   };
 
   const closeAsk = () => {
@@ -177,41 +180,90 @@ export function DialogueBox({ text, mood = 'idle', instruction, topic, children 
           <p className="dialogue__instruction">{instruction}</p>
         )}
 
-        {asking ? (
-          <form className="dialogue__ask" onSubmit={submit}>
-            {micSupported && (
-              <DwellTarget onActivate={toggleMic} dwellMs={650}>
-                <button
-                  type="button"
-                  className={`dialogue__mic ${listening ? 'is-listening' : ''}`}
-                  onClick={toggleMic}
-                  aria-label={listening ? 'Stop and ask' : 'Ask by speaking'}
-                >
-                  {listening ? '⏺️' : '🎙️'}
+        {thinking ? null : asking ? (
+          micSupported ? (
+            <div className="dialogue__ask">
+              {listening ? (
+                <>
+                  <DwellTarget onActivate={stopListening} dwellMs={650}>
+                    <button
+                      type="button"
+                      className="dialogue__mic is-listening"
+                      onClick={stopListening}
+                      aria-label="Stop talking"
+                    >
+                      🎙️
+                    </button>
+                  </DwellTarget>
+                  {/* What she's hearing, live - not an editable field, since
+                      there is nothing to type or confirm here, just to see
+                      that it's working. */}
+                  <p className="dialogue__listening-caption">{transcript || 'Listening...'}</p>
+                  <DwellTarget onActivate={closeAsk} dwellMs={650}>
+                    <button type="button" className="btn btn--ghost btn--sm" onClick={closeAsk}>
+                      Cancel
+                    </button>
+                  </DwellTarget>
+                </>
+              ) : micStarting ? (
+                <>
+                  {/* The gap between tapping the button and the mic actually
+                      switching on (waiting on the permission/device) - brief,
+                      but silence with no feedback here reads as broken. */}
+                  <span className="dialogue__mic dialogue__mic--muted" aria-hidden="true">
+                    🎙️
+                  </span>
+                  <p className="dialogue__listening-caption">Getting the microphone ready...</p>
+                  <DwellTarget onActivate={closeAsk} dwellMs={650}>
+                    <button type="button" className="btn btn--ghost btn--sm" onClick={closeAsk}>
+                      Cancel
+                    </button>
+                  </DwellTarget>
+                </>
+              ) : (
+                <>
+                  <span className="dialogue__mic dialogue__mic--muted" aria-hidden="true">
+                    🎙️
+                  </span>
+                  <p className="dialogue__listening-caption">Hmm, I didn't quite catch that.</p>
+                  <DwellTarget onActivate={retryListening} dwellMs={650}>
+                    <button type="button" className="btn btn--sm" onClick={retryListening}>
+                      Try again
+                    </button>
+                  </DwellTarget>
+                  <DwellTarget onActivate={closeAsk} dwellMs={650}>
+                    <button type="button" className="btn btn--ghost btn--sm" onClick={closeAsk}>
+                      Never mind
+                    </button>
+                  </DwellTarget>
+                </>
+              )}
+            </div>
+          ) : (
+            // Browsers without speech recognition (Firefox, mainly) fall
+            // back to typing - the one case this still needs a text field.
+            <form className="dialogue__ask" onSubmit={submit}>
+              <input
+                ref={inputRef}
+                className="dialogue__ask-input"
+                value={question}
+                onChange={(event) => setQuestion(event.target.value)}
+                placeholder="Ask me anything at all..."
+                maxLength={200}
+                aria-label="Ask Curio a question"
+              />
+              <DwellTarget onActivate={() => void ask(question)} dwellMs={650} disabled={!question.trim()}>
+                <button type="submit" className="btn btn--sm" disabled={!question.trim()}>
+                  Ask
                 </button>
               </DwellTarget>
-            )}
-            <input
-              ref={inputRef}
-              className="dialogue__ask-input"
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              placeholder={listening ? 'Listening...' : 'Ask me anything at all...'}
-              maxLength={200}
-              aria-label="Ask Curio a question"
-              readOnly={listening}
-            />
-            <DwellTarget onActivate={() => void ask(question)} dwellMs={650} disabled={!question.trim()}>
-              <button type="submit" className="btn btn--sm" disabled={!question.trim()}>
-                Ask
-              </button>
-            </DwellTarget>
-            <DwellTarget onActivate={closeAsk} dwellMs={650}>
-              <button type="button" className="btn btn--ghost btn--sm" onClick={closeAsk}>
-                Cancel
-              </button>
-            </DwellTarget>
-          </form>
+              <DwellTarget onActivate={closeAsk} dwellMs={650}>
+                <button type="button" className="btn btn--ghost btn--sm" onClick={closeAsk}>
+                  Cancel
+                </button>
+              </DwellTarget>
+            </form>
+          )
         ) : (
           <div className="dialogue__actions">
             {answer ? (
@@ -230,10 +282,10 @@ export function DialogueBox({ text, mood = 'idle', instruction, topic, children 
             ) : (
               <>
                 {children}
-                {!thinking && aiEnabled && (
+                {aiEnabled && (
                   <DwellTarget onActivate={openAsk}>
                     <button className="btn btn--ghost btn--sm dialogue__ask-open" onClick={openAsk}>
-                      🎙️ Ask me anything
+                      {micSupported ? '🎙️ Ask me anything' : '💬 Ask me anything'}
                     </button>
                   </DwellTarget>
                 )}

@@ -558,6 +558,30 @@
   animation: mic-pulse 1.1s ease-in-out infinite;
 }
 
+/* The static mic shown while getting ready, or after a phrase went unheard -
+   a <span>, not a button, so it doesn't invite a tap that does nothing. */
+.dialogue__mic--muted {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.dialogue__mic--muted:hover {
+  transform: none;
+}
+
+/* Live captions of what she's hearing - never an input, just feedback that
+   the mic is actually working, so "Ask me anything" reads as a live
+   conversation rather than a form with extra steps. */
+.dialogue__listening-caption {
+  flex: 1 1 200px;
+  min-width: 0;
+  min-height: 1.4em;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
 @keyframes mic-pulse {
   0%,
   100% {
