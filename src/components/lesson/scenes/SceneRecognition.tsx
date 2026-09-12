@@ -4,6 +4,7 @@ import { sfx } from '../../../audio/sound';
 import { DwellTarget } from '../../../tracker/DwellTarget';
 import { FractionCanvas } from '../FractionCanvas';
 import { DialogueBox } from '../DialogueBox';
+import { quizRetryFor } from '../dialogue';
 import { Confetti } from '../Confetti';
 import type { Cut, ShapeKind } from '../fractionGeometry';
 
@@ -66,6 +67,8 @@ export function SceneRecognition({ onNext }: { onNext: () => void }) {
   const [round, setRound] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
   const [wrong, setWrong] = useState<string | null>(null);
+  const [misses, setMisses] = useState(0);
+  const [nudgeLine, setNudgeLine] = useState<string | null>(null);
   const current = ROUNDS[round];
   const solved = picked === current.answer;
 
@@ -75,9 +78,16 @@ export function SceneRecognition({ onNext }: { onNext: () => void }) {
       sfx.play('success');
       setPicked(id);
       setWrong(null);
+      setNudgeLine(null);
     } else {
       sfx.play('retry');
       setWrong(id);
+      // Say something. A wrong pick used to wobble the option and play a sound
+      // while Curio carried on as though nothing had happened - leaving the
+      // child who most needed a word with silence.
+      const next = misses + 1;
+      setMisses(next);
+      setNudgeLine(quizRetryFor(next));
       setTimeout(() => setWrong(null), 700);
     }
   };
@@ -89,6 +99,8 @@ export function SceneRecognition({ onNext }: { onNext: () => void }) {
     }
     setRound(round + 1);
     setPicked(null);
+    setMisses(0);
+    setNudgeLine(null);
   };
 
   return (
@@ -129,7 +141,7 @@ export function SceneRecognition({ onNext }: { onNext: () => void }) {
       </div>
 
       <DialogueBox
-        text={solved ? current.success : current.ask}
+        text={solved ? current.success : (nudgeLine ?? current.ask)}
         mood={solved ? 'cheer' : wrong ? 'think' : 'idle'}
         instruction={current.objective}
       >

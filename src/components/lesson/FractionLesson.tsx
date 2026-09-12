@@ -150,7 +150,6 @@ export function FractionLesson({ onExit, onKeepExploring }: FractionLessonProps)
             cutInstruction="Draw two lines through the middle - one across, one down."
             successLine="Nice work. Four equal parts, every one the same size."
             successLabel="4 EQUAL PARTS"
-            retryLine="Almost! Each part has to be the same size. Try that line again."
             onSolved={next}
           />
         ),
