@@ -16,7 +16,7 @@ services:
         name: Permissions-Policy
         value: camera=(self)
     envVars:
-      # Poly's narration is optional - leave unset and dialogue stays text-only.
+      # Curio's narration is optional - leave unset and dialogue stays text-only.
       # NOTE: if this service was created by hand in the Render dashboard (not
       # via "New > Blueprint"), Render ignores this file entirely - set these
       # env vars and the header above directly in the dashboard instead.
@@ -24,7 +24,7 @@ services:
         value: https://curiocity-voice.onrender.com/api
 
   # Holds ELEVENLABS_API_KEY and IFM_API_KEY server-side, proxying narration
-  # and Poly's AI hints. See server/index.mjs - this is the one deliberate
+  # and Curio's AI hints. See server/index.mjs - this is the one deliberate
   # exception to "no server".
   - type: web
     name: curiocity-voice
