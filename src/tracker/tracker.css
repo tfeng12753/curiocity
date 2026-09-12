@@ -1,0 +1,205 @@
+.finger-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  pointer-events: none;
+  z-index: 9000;
+  transition: opacity 0.18s ease;
+  will-change: transform;
+}
+
+.finger-cursor__halo {
+  fill: rgba(122, 92, 240, 0.18);
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 2;
+}
+
+.finger-cursor__dot {
+  fill: #fff;
+  stroke: var(--violet-600);
+  stroke-width: 3;
+}
+
+.finger-cursor__ring {
+  fill: none;
+  stroke: var(--sun-500);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 32px 32px;
+  transition: stroke-dashoffset 0.08s linear, opacity 0.15s ease;
+  filter: drop-shadow(0 0 6px rgba(255, 194, 74, 0.7));
+}
+
+.finger-cursor.is-pointer .finger-cursor__halo {
+  fill: rgba(122, 92, 240, 0.1);
+  stroke: rgba(122, 92, 240, 0.35);
+}
+
+.finger-cursor.is-pointer .finger-cursor__dot {
+  r: 5;
+  opacity: 0.9;
+}
+
+.finger-cursor.is-searching {
+  animation: cursor-search 1.4s ease-in-out infinite;
+}
+
+@keyframes cursor-search {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* --------------------------------------------------- camera picture-in-picture */
+
+.camera-pip {
+  position: relative;
+  width: 168px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #1b1340;
+  box-shadow: var(--shadow-md);
+  border: 3px solid rgba(255, 255, 255, 0.85);
+}
+
+.camera-pip video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.camera-pip__label {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: rgba(15, 10, 40, 0.72);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.camera-pip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mint-500);
+  box-shadow: 0 0 8px var(--mint-500);
+}
+
+.camera-pip__dot.is-waiting {
+  background: var(--sun-500);
+  box-shadow: 0 0 8px var(--sun-500);
+  animation: cursor-search 1.2s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------- onboarding */
+
+.camera-gate {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgba(24, 16, 62, 0.62);
+  backdrop-filter: blur(6px);
+  padding: 24px;
+}
+
+.camera-gate__card {
+  width: min(560px, 100%);
+  background: #fff;
+  border-radius: var(--r-xl);
+  padding: 38px 40px 34px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+
+.camera-gate__card h2 {
+  font-size: 2.1rem;
+  margin-bottom: 10px;
+}
+
+.camera-gate__card p {
+  color: var(--ink-soft);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.camera-gate__hand {
+  width: 130px;
+  height: 130px;
+  margin: 0 auto 12px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, var(--violet-050), #fff 70%);
+  animation: hand-wave 2.4s ease-in-out infinite;
+}
+
+@keyframes hand-wave {
+  0%,
+  100% {
+    transform: rotate(-7deg) translateY(0);
+  }
+  50% {
+    transform: rotate(7deg) translateY(-6px);
+  }
+}
+
+.camera-gate__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 26px;
+}
+
+.camera-gate__note {
+  margin-top: 18px;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+
+.camera-gate__error {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  background: var(--nudge-soft);
+  color: #8a5a00;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+/* ------------------------------------------------------------ dwell target */
+
+.dwell-target {
+  display: inline-flex;
+  position: relative;
+  border-radius: var(--r-pill);
+}
+
+.dwell-target.is-hot {
+  filter: drop-shadow(0 0 14px rgba(255, 194, 74, 0.55));
+}
+
+.dwell-target.is-hot > * {
+  transform: translateY(-2px);
+}
