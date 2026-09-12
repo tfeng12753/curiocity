@@ -20,8 +20,8 @@ const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 // will silently cost you narration. Only the account's own default voices
 // work. These six are verified working on a free key:
 //
-//   Laura    FGY2WhTYpPnrIDTdsKH5  upbeat, quirky, young  <- Curio's default
-//   Jessica  cgSgspJ2msm6clMCkdW9  young, playful, expressive
+//   Jessica  cgSgspJ2msm6clMCkdW9  young, playful, expressive  <- Curio's default
+//   Laura    FGY2WhTYpPnrIDTdsKH5  upbeat, quirky, young
 //   Matilda  XrExE9yKIg1WjnnlVkGX  friendly, warm
 //   Lily     pFZP5JQG7iQjIQuC4Bku  warm British
 //   Alice    Xb7hH8MSUJpSbSDYk0k2  confident British
@@ -29,22 +29,21 @@ const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 //
 // Set ELEVENLABS_VOICE_ID to override without touching code. If that override
 // turns out to be unusable, fetchSpeech falls back rather than going silent.
-const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? 'FGY2WhTYpPnrIDTdsKH5';
-const FALLBACK_VOICE_ID = 'cgSgspJ2msm6clMCkdW9';
+//
+// Choose by ear, not by adjective: `node --env-file=server/.env
+// scripts/voice-audition.mjs` reads the same line in all six with the settings
+// below, so what you hear is what ships.
+const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? 'cgSgspJ2msm6clMCkdW9';
+const FALLBACK_VOICE_ID = 'FGY2WhTYpPnrIDTdsKH5';
 /** 0-1. Lower is more expressive and variable; higher is flatter and safer. */
-const VOICE_STABILITY = clamp01(process.env.ELEVENLABS_STABILITY, 0.28);
+const VOICE_STABILITY = clamp01(process.env.ELEVENLABS_STABILITY, 0.42);
 /** 0-1. Exaggerates the voice's own character. Above ~0.5 gets unstable. */
-const VOICE_STYLE = clamp01(process.env.ELEVENLABS_STYLE, 0.5);
+const VOICE_STYLE = clamp01(process.env.ELEVENLABS_STYLE, 0.45);
 /*
-  0.7-1.2, and deliberately below 1: the client plays narration back faster
-  than real time to raise the pitch (see EXCITEMENT_RATE in src/audio/voice.ts),
-  which would otherwise leave Curio gabbling. Synthesising slow and speeding up
-  on playback buys a childlike pitch at a normal speaking pace - ElevenLabs has
-  no pitch control of its own, so this pair is how we get one.
-
-  Change one of these two and you must change the other.
+  0.7-1.2. Natural pace, very slightly forward - she is keen, not hurried, and
+  a lesson read too fast is a lesson a child cannot follow.
 */
-const VOICE_SPEED = clampRange(process.env.ELEVENLABS_SPEED, 0.86, 0.7, 1.2);
+const VOICE_SPEED = clampRange(process.env.ELEVENLABS_SPEED, 1.02, 0.7, 1.2);
 
 function clamp01(raw, fallback) {
   return clampRange(raw, fallback, 0, 1);

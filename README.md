@@ -163,7 +163,21 @@ proxy offline, `src/ai/curio.ts` returns `null` and every caller falls back
 to written copy; narration falls back to the browser's own speech synthesis.
 AI only ever *upgrades* what a child sees — it never gates it.
 
-**Two budgets protect the keys**, because they're a fixed monthly allowance
+**Anyone can switch the paid parts off**, from the ⚙️ in the top bar — no
+redeploy, and nothing is lost but the polish. `src/state/settings.ts` holds two
+choices, saved per device:
+
+- **Curio's voice** — her real voice (credits), the device's own speech
+  synthesis (free, robotic), or no talking at all (her lines stay on screen)
+- **Curio's answers** — off means written hints, no personalised recap, and the
+  "Ask me anything" box is hidden rather than offered and then apologising
+
+It's a plain module, not React state, because `voice.ts` and `ai/curio.ts` read
+it synchronously and aren't components; `useSettings()` subscribes the UI to the
+same single source of truth. Verified: with the voice off a lesson makes zero
+narration requests, and with answers off the question box does not appear.
+
+**Two budgets also protect the keys**, because they're a fixed monthly allowance
 shared by every child on the site and one bored student holding down "Ask"
 could spend it all:
 
@@ -185,12 +199,22 @@ Measured: one request on a first visit, zero for the same line after a reload.
 > can't see any of them (they live in the server's environment), so without a
 > bump children keep hearing lines in the old voice until they age out.
 
-**Her pitch is a pair of numbers that must move together.** ElevenLabs has no
-pitch control, so the proxy synthesises *slow* (`VOICE_SPEED`, 0.86) and the
-client plays back *fast* with pitch preservation switched off
-(`EXCITEMENT_RATE`, 1.18 in `src/audio/voice.ts`). The rates cancel to roughly
-normal speaking pace while the pitch lands about three semitones up — childlike
-and delighted. Change one without the other and she either gabbles or drawls.
+**Pick her voice by ear, not by adjective:**
+
+```bash
+node --env-file=server/.env scripts/voice-audition.mjs
+```
+
+That writes one MP3 per candidate voice, all reading the same line with the
+exact settings the proxy uses, then you set `ELEVENLABS_VOICE_ID` to whichever
+you liked. Six short lines costs about 350 characters of quota.
+
+> **Don't fake the pitch.** Resampling playback to raise it (`playbackRate`
+> with `preservesPitch` off) drags the formants up too — the "munchkin" effect,
+> which reads as a processed adult rather than a child. `EXCITEMENT_RATE` in
+> `src/audio/voice.ts` is the knob and it is set to 1 on purpose; past about
+> 1.05 the artefacts show. Youth comes from picking a genuinely young voice and
+> from how her lines are written.
 
 Both APIs need a secret key that can't live in client-side code, so this is
 the one deliberate exception to "no server" below: `server/` is a small,

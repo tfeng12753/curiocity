@@ -23,7 +23,7 @@ const STORE = 'clips';
  * see ELEVENLABS_VOICE_ID, which lives in the server's environment, so a voice
  * swap would otherwise keep serving lines in the old one until they aged out.
  */
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 /** Roughly 8MB of MP3 - far more than one lesson, nowhere near a quota. */
 const MAX_BYTES = 8 * 1024 * 1024;

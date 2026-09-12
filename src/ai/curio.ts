@@ -7,6 +7,8 @@
   Callers therefore always have a written fallback ready, and AI only ever
   *upgrades* what the child sees - it never gates it.
 */
+import { settings } from '../state/settings';
+
 const ENDPOINT = (import.meta.env.VITE_API_ENDPOINT ?? '/api').replace(/\/$/, '');
 
 /*
@@ -31,6 +33,7 @@ interface CurioRequest {
 }
 
 async function request(intent: Intent, body: CurioRequest, signal?: AbortSignal) {
+  if (!settings.aiEnabled()) return null;
   if (callsMade >= CALL_BUDGET) return null;
   callsMade += 1;
 

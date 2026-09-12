@@ -14,6 +14,7 @@
 import { sfx } from './sound';
 import { speakable } from './speakable';
 import { readCachedClip, writeCachedClip } from './audioCache';
+import { settings } from '../state/settings';
 
 const ENDPOINT = (import.meta.env.VITE_API_ENDPOINT ?? '/api').replace(/\/$/, '');
 const CACHE_LIMIT = 40;
@@ -30,18 +31,17 @@ const SYNTH_BUDGET = 40;
 let synthesised = 0;
 
 /*
-  Curio should sound childlike and thrilled, not like a narrator. ElevenLabs
-  has no pitch control at all, so the lift happens here: with pitch
-  preservation switched off, playbackRate shifts pitch the way speeding up a
-  tape does. 1.18 is around three semitones up - clearly a kid, still clearly
-  her.
+  Deliberately 1: resampling to fake a higher pitch drags the formants up with
+  it, which is the "munchkin" sound - it reads as a processed adult rather than
+  as a child, and it was worse than the voice it replaced. Curio's youth comes
+  from choosing a voice that is genuinely young and from how she is written,
+  not from a playback trick.
 
-  Played straight that would also make her talk 18% faster, so the proxy
-  synthesises at VOICE_SPEED 0.86 to cancel it out: 0.86 x 1.18 is about 1.01,
-  a normal speaking pace at a much higher pitch. The two numbers are a pair -
-  change one and you must change the other, or she either gabbles or drawls.
+  Left in place because it is the one knob that also affects audio already in
+  the cache, which makes it the cheapest thing to try if she ever needs a
+  nudge. Small steps: past about 1.05 the artefacts start to show.
 */
-const EXCITEMENT_RATE = 1.18;
+const EXCITEMENT_RATE = 1;
 
 /**
  * Falling back to browser speech is meant to be graceful, not invisible. It was
@@ -181,8 +181,8 @@ function speakWithBrowser(text: string, onAmplitude?: (level: number) => void, o
   // instructional, without tipping into cartoonish.
   // SpeechSynthesis has a real pitch control (0-2), so no playback trick
   // is needed here - just ask for the same bright, childlike register.
-  utterance.rate = 1.0;
-  utterance.pitch = 1.7;
+  utterance.rate = 1.02;
+  utterance.pitch = 1.3;
 
   // There is no audio stream to measure here, so the mouth is driven by a
   // burbling oscillation for as long as she is talking - close enough to
@@ -275,14 +275,16 @@ async function playUrl(url: string, onAmplitude?: (level: number) => void, onEnd
   const audioEl = new Audio(url);
   currentAudio = audioEl;
 
-  // Browsers preserve pitch across rate changes by default, which would just
-  // make her talk faster in the same register. Turning that off is the whole
-  // trick. Safari spelled it differently for years, hence both.
-  type PitchyAudio = HTMLAudioElement & { preservesPitch?: boolean; webkitPreservesPitch?: boolean };
-  const pitchy = audioEl as PitchyAudio;
-  pitchy.preservesPitch = false;
-  pitchy.webkitPreservesPitch = false;
-  audioEl.playbackRate = EXCITEMENT_RATE;
+  if (EXCITEMENT_RATE !== 1) {
+    // Browsers preserve pitch across a rate change by default; turning that
+    // off is what makes rate shift pitch at all. Safari spelled the property
+    // differently for years, hence both.
+    type PitchyAudio = HTMLAudioElement & { preservesPitch?: boolean; webkitPreservesPitch?: boolean };
+    const pitchy = audioEl as PitchyAudio;
+    pitchy.preservesPitch = false;
+    pitchy.webkitPreservesPitch = false;
+    audioEl.playbackRate = EXCITEMENT_RATE;
+  }
   audioEl.onended = () => {
     onAmplitude?.(0);
     onEnd?.();
@@ -307,7 +309,10 @@ async function playUrl(url: string, onAmplitude?: (level: number) => void, onEnd
 export const voice = {
   async speak(rawText: string, { voiceId, onAmplitude, onEnd }: SpeakOptions = {}) {
     stopPlayback();
-    if (sfx.isMuted() || !rawText.trim()) {
+    const mode = settings.voiceMode();
+    if (sfx.isMuted() || mode === 'off' || !rawText.trim()) {
+      // onEnd still fires: scenes that wait for Curio to finish speaking must
+      // advance normally when she is switched off, or the lesson stalls.
       onEnd?.();
       return;
     }
@@ -316,6 +321,11 @@ export const voice = {
     // the ElevenLabs request and the browser fallback all agree on one string
     // - and "1/2" is never read out as "one slash two".
     const text = speakable(rawText);
+
+    if (mode === 'browser') {
+      speakWithBrowser(text, onAmplitude, onEnd);
+      return;
+    }
 
     const controller = new AbortController();
     currentController = controller;

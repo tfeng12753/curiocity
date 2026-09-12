@@ -4,6 +4,7 @@ import { Curio, type CurioMood } from '../curio/Curio';
 import { useVoiceover } from '../../hooks/useVoiceover';
 import { curio } from '../../ai/curio';
 import { sfx } from '../../audio/sound';
+import { useSettings } from '../../hooks/useSettings';
 
 interface DialogueBoxProps {
   text: string;
@@ -57,6 +58,7 @@ export function DialogueBox({ text, mood = 'idle', instruction, topic, children 
   const [answer, setAnswer] = useState<string | null>(null);
   const [thinking, setThinking] = useState(false);
   const [thinkingLine, setThinkingLine] = useState(THINKING_LINES[0]);
+  const { aiEnabled } = useSettings();
   const inputRef = useRef<HTMLInputElement>(null);
   const pending = useRef<AbortController | null>(null);
 
@@ -170,7 +172,7 @@ export function DialogueBox({ text, mood = 'idle', instruction, topic, children 
             ) : (
               <>
                 {children}
-                {!thinking && (
+                {!thinking && aiEnabled && (
                   <button
                     className="btn btn--ghost btn--sm dialogue__ask-open"
                     onClick={() => setAsking(true)}

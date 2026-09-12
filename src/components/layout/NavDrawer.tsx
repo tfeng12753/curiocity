@@ -5,6 +5,8 @@ import { BADGES, useProgress } from '../../state/progress';
 import { ALL_COSMETICS, SLOT_META, type CosmeticId, type SlotMeta } from '../../data/cosmetics';
 import { PetGlyph, PlayerCharacter } from '../player/PlayerCharacter';
 import { sfx } from '../../audio/sound';
+import { settings, type VoiceMode } from '../../state/settings';
+import { useSettings } from '../../hooks/useSettings';
 import type { NavPanel } from './TopNav';
 import './layout.css';
 
@@ -89,6 +91,8 @@ export function NavDrawer({ panel, onClose }: { panel: NavPanel; onClose: () => 
               })}
             </div>
           </>
+        ) : panel === 'settings' ? (
+          <SettingsPanel />
         ) : (
           <Wardrobe />
         )}
@@ -229,6 +233,103 @@ function Wardrobe() {
 
       <h3 className="wardrobe__heading">Shop · spend your coins</h3>
       {SLOT_META.filter((slot) => !slot.free).map(renderSlot)}
+    </>
+  );
+}
+
+const VOICE_MODES: { id: VoiceMode; label: string; blurb: string }[] = [
+  {
+    id: 'real',
+    label: "Curio's own voice",
+    blurb: 'Her real voice, warm and a bit squeaky. Uses online credits - each line is only ever paid for once, then kept on this device.',
+  },
+  {
+    id: 'browser',
+    label: 'Your device’s voice',
+    blurb: 'Reads her lines with the voice built into this computer. Free and works offline, but it sounds like a robot.',
+  },
+  {
+    id: 'off',
+    label: 'No talking',
+    blurb: 'Curio stays quiet. Everything she says is still written out on screen.',
+  },
+];
+
+/**
+ * The paid parts of Curio, in the hands of whoever owns the device. A teacher
+ * on a class set, or anyone demoing on a shared allowance, can turn them off
+ * here rather than needing a redeploy.
+ */
+function SettingsPanel() {
+  const { voiceMode, aiEnabled } = useSettings();
+
+  return (
+    <>
+      <h2>Settings</h2>
+      <p className="drawer__sub">
+        Curio can talk out loud and answer questions of her own. Both use an online
+        service, so you can turn them down here - everything still works without them.
+      </p>
+
+      <section className="drawer__city">
+        <div className="drawer__city-head">
+          <strong>Curio’s voice</strong>
+        </div>
+        <div className="setting-list">
+          {VOICE_MODES.map((option) => (
+            <button
+              key={option.id}
+              className={`setting-option ${voiceMode === option.id ? 'is-on' : ''}`}
+              onClick={() => {
+                settings.setVoiceMode(option.id);
+                sfx.play('tap');
+              }}
+              aria-pressed={voiceMode === option.id}
+            >
+              <span className="setting-option__mark" aria-hidden="true">
+                {voiceMode === option.id ? '●' : ''}
+              </span>
+              <span>
+                <strong>{option.label}</strong>
+                <span>{option.blurb}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="drawer__city">
+        <div className="drawer__city-head">
+          <strong>Curio’s answers</strong>
+        </div>
+        <div className="setting-list">
+          <button
+            className={`setting-option ${aiEnabled ? 'is-on' : ''}`}
+            onClick={() => {
+              settings.setAiEnabled(!aiEnabled);
+              sfx.play('tap');
+            }}
+            aria-pressed={aiEnabled}
+          >
+            <span className="setting-option__mark" aria-hidden="true">
+              {aiEnabled ? '✓' : ''}
+            </span>
+            <span>
+              <strong>Let Curio think for herself</strong>
+              <span>
+                Her hints, the “Ask me anything” box, and the little summary at the end of a
+                lesson. Switched off, she uses her written lines instead and the question box
+                is hidden.
+              </span>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <p className="drawer__sub" style={{ marginTop: 18, fontSize: '0.82rem' }}>
+        These are saved on this device only, and they never affect progress, coins or
+        anything you have unlocked.
+      </p>
     </>
   );
 }
