@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { sfx } from '../audio/sound';
 import { CameraDiagnostics } from './CameraDiagnostics';
-import { tracker } from './trackerStore';
+import { tracker, type TrackerDiagnostics } from './trackerStore';
 import { useTrackerState } from './useTracker';
 import './tracker.css';
 
@@ -40,8 +40,55 @@ function CameraPreview({ streamKey }: { streamKey: number }) {
   return <div className="camera-settings__preview" ref={slotRef} />;
 }
 
+/**
+ * Reads the pipeline out in the order it runs, so the first ✗ is the fault.
+ * Between a live camera and a moving cursor there are four separate things
+ * that can fail while looking identical from the outside.
+ */
+function PipelineReport({ diagnostics, live }: { diagnostics: TrackerDiagnostics; live: boolean }) {
+  if (!live) return null;
+
+  const { modelReady, framesSeen, framesProcessed, handFrames, detectError, modelSource } = diagnostics;
+  const rows = [
+    {
+      ok: modelReady,
+      label: modelReady ? 'Hand model loaded' : 'Hand model still loading',
+      note: modelSource?.startsWith('/') ? 'from this site' : modelSource ? 'from Google (slower)' : undefined,
+    },
+    {
+      ok: framesSeen > 0,
+      label: framesSeen > 0 ? `Seeing video (${framesSeen} frames)` : 'No video frames yet',
+      note: framesSeen === 0 ? 'The camera is on but not sending pictures.' : undefined,
+    },
+    {
+      ok: framesSeen === 0 || framesProcessed > 0,
+      label: framesProcessed > 0 ? 'Looking for hands' : 'Hand detection is failing',
+      note: detectError ?? undefined,
+    },
+    {
+      ok: handFrames > 0,
+      label: handFrames > 0 ? `Hand found (${handFrames} frames)` : 'No hand seen yet',
+      note: handFrames === 0 && framesProcessed > 0 ? 'Hold one hand up, palm towards the camera.' : undefined,
+    },
+  ];
+
+  return (
+    <ul className="camera-settings__pipeline">
+      {rows.map((row) => (
+        <li key={row.label} className={row.ok ? 'is-ok' : ''}>
+          <span aria-hidden="true">{row.ok ? '✅' : '⏳'}</span>
+          <span>
+            {row.label}
+            {row.note && <em>{row.note}</em>}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function CameraSettings() {
-  const { mode, status, handVisible, error } = useTrackerState();
+  const { mode, status, handVisible, error, diagnostics } = useTrackerState();
   const [cameras, setCameras] = useState<{ deviceId: string; label: string }[]>([]);
   const [selected, setSelected] = useState(() => tracker.preferredCamera() ?? '');
   const [busy, setBusy] = useState(false);
@@ -99,6 +146,8 @@ export function CameraSettings() {
       )}
 
       {error && <p className="camera-settings__error">{error}</p>}
+
+      <PipelineReport diagnostics={diagnostics} live={live} />
 
       {cameras.length > 1 && (
         <label className="camera-settings__picker">

@@ -527,3 +527,36 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+
+.camera-settings__pipeline {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: #fff;
+  display: grid;
+  gap: 8px;
+}
+
+.camera-settings__pipeline li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.camera-settings__pipeline li.is-ok {
+  color: var(--ink);
+}
+
+.camera-settings__pipeline em {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+  line-height: 1.4;
+}

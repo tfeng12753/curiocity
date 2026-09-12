@@ -125,7 +125,9 @@ src/
 scripts/
   playthrough.mjs           clicks through the entire lesson and asserts it completes
   camera-check.mjs          boots hand tracking against a synthetic camera
-  sync-mediapipe-wasm.mjs   copies the wasm runtime into public/ (runs on install)
+  voice-audition.mjs        reads one line in every candidate voice, to choose by ear
+  sync-mediapipe-wasm.mjs   vendors the wasm runtime *and* the 7.8MB hand model
+                            into public/ (runs on install)
 server/
   index.mjs                 optional TTS proxy - see "Voice" below
 ```
@@ -174,6 +176,12 @@ because that's what goes wrong:
   virtual camera, or a Mac handing over to an iPhone via Continuity — and the
   choice is remembered, because a fix you repeat every visit isn't a fix.
 - **Restart camera**, the usual cure for a stalled feed.
+- A **pipeline report**, read in the order things run, so the first ✗ is the
+  fault: model loaded → seeing video frames → detection running → hand found.
+  Between a live camera and a moving cursor those four can each fail while
+  looking identical from outside — a lit camera light and a cursor that doesn't
+  move — which is why "the camera is on but nothing happens" used to be
+  unanswerable.
 - The same **diagnostics** as the first-run gate (secure context, browser
   support, permission state with the exact fix, cameras detected) — they matter
   more here, since this is where you go *after* the camera has let you down.

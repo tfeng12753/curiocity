@@ -54,6 +54,32 @@ export interface TrackerState {
   error: string | null;
   /** True once the student has seen (and answered) the camera onboarding. */
   onboarded: boolean;
+  /*
+    Why "the camera is on but nothing happens" used to be unanswerable.
+
+    Between a live MediaStream and a moving cursor sit four things that can
+    each fail silently: the video never decodes a frame, the model never
+    downloads, inference throws on every frame, or inference runs fine and
+    simply never sees a hand. All four look identical from the outside - a lit
+    camera light and a cursor that does not move - so Settings reports them
+    separately rather than making anyone guess.
+  */
+  diagnostics: TrackerDiagnostics;
+}
+
+export interface TrackerDiagnostics {
+  /** The hand model is downloaded and inference is constructed. */
+  modelReady: boolean;
+  /** Video frames the loop has actually seen advance. Stuck at 0 = decode problem. */
+  framesSeen: number;
+  /** Frames inference ran on. Far below framesSeen = inference is throwing. */
+  framesProcessed: number;
+  /** Frames a hand was found in. 0 with the rest healthy = it just cannot see you. */
+  handFrames: number;
+  /** First inference error, which the loop used to swallow entirely. */
+  detectError: string | null;
+  /** Where the model was loaded from, since a blocked CDN is a common cause. */
+  modelSource: string | null;
 }
 
 /*
@@ -85,13 +111,43 @@ function writePreferredCamera(deviceId: string | null) {
 
 const WASM_LOCAL = '/mediapipe/wasm';
 const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm';
-const MODEL_URL =
+/*
+  The hand model is a 7.8MB download, and it was fetched from Google's CDN on
+  every first camera start. That is the single most likely reason for "the
+  camera light is on but nothing happens": on a slow connection it can outlast
+  the start timeout, and on a school or office network storage.googleapis.com
+  is often blocked outright - in both cases the camera is already live by the
+  time the model gives up.
+
+  scripts/sync-mediapipe-wasm.mjs now vendors it into public/ alongside the
+  wasm, so the normal path is same-origin and browser-cached. The remote copy
+  stays as a fallback for a build where that download did not happen.
+*/
+const MODEL_LOCAL = '/mediapipe/models/hand_landmarker.task';
+const MODEL_CDN =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+
+/** Resolves to the local model if this build actually shipped one. */
+async function resolveModelUrl(): Promise<string> {
+  try {
+    const response = await fetch(MODEL_LOCAL, { method: 'HEAD' });
+    // A SPA rewrite answers any path with index.html, so a 200 is not enough -
+    // check it is really a model and not the app's own HTML.
+    const type = response.headers.get('content-type') ?? '';
+    if (response.ok && !type.includes('text/html')) return MODEL_LOCAL;
+  } catch {
+    /* fall through to the CDN */
+  }
+  return MODEL_CDN;
+}
 
 /** The onboarding gate ("Ready to interact?") is a once-ever thing, not a
  *  per-lesson one - remembered across reloads so a returning student who
  *  already learned the gesture is never asked again. */
 const ONBOARDED_KEY = 'learnverse.onboarded.v1';
+
+/** Increments per start, so a superseded attempt can recognise itself. */
+let startAttempt = 0;
 
 function loadOnboarded(): boolean {
   try {
@@ -138,6 +194,14 @@ let state: TrackerState = {
   status: 'idle',
   handVisible: false,
   error: null,
+  diagnostics: {
+    modelReady: false,
+    framesSeen: 0,
+    framesProcessed: 0,
+    handFrames: 0,
+    detectError: null,
+    modelSource: null,
+  },
   onboarded: loadOnboarded(),
 };
 let dwell = 0;
@@ -370,11 +434,14 @@ async function createLandmarker(): Promise<HandLandmarker> {
     fileset = await FilesetResolver.forVisionTasks(WASM_CDN);
   }
 
+  const modelUrl = await resolveModelUrl();
+  patchState({ diagnostics: { ...state.diagnostics, modelSource: modelUrl } });
+
   let lastError: unknown;
   for (const delegate of ['GPU', 'CPU'] as const) {
     try {
       return await HandLandmarker.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: MODEL_URL, delegate },
+        baseOptions: { modelAssetPath: modelUrl, delegate },
         runningMode: 'VIDEO',
         numHands: 1,
         minHandDetectionConfidence: 0.6,
@@ -387,18 +454,51 @@ async function createLandmarker(): Promise<HandLandmarker> {
   throw lastError ?? new Error('Hand tracking could not start on this device.');
 }
 
+/*
+  Frame counters live here rather than in the store because patchState on every
+  animation frame would re-render the entire app sixty times a second. They are
+  flushed into the store about once a second, which is plenty for a diagnostics
+  readout that a human is looking at.
+*/
+const counters = { framesSeen: 0, framesProcessed: 0, handFrames: 0, detectError: null as string | null };
+let lastCounterFlush = 0;
+
+function flushCounters(force = false) {
+  const now = performance.now();
+  if (!force && now - lastCounterFlush < 1000) return;
+  lastCounterFlush = now;
+  patchState({
+    diagnostics: {
+      ...state.diagnostics,
+      framesSeen: counters.framesSeen,
+      framesProcessed: counters.framesProcessed,
+      handFrames: counters.handFrames,
+      detectError: counters.detectError,
+    },
+  });
+}
+
 function loop() {
   rafId = requestAnimationFrame(loop);
   const el = video;
   if (!landmarker || !el || el.readyState < 2 || el.currentTime === lastVideoTime) return;
   lastVideoTime = el.currentTime;
+  counters.framesSeen += 1;
 
   let landmarks;
   try {
     landmarks = landmarker.detectForVideo(el, performance.now()).landmarks?.[0];
-  } catch {
+    counters.framesProcessed += 1;
+  } catch (error) {
+    // This used to be a bare `return`, which meant a model that threw on every
+    // single frame was indistinguishable from a student holding their hand out
+    // of shot. Keeping the first message is the whole difference.
+    counters.detectError ??= error instanceof Error ? error.message : String(error);
+    flushCounters();
     return;
   }
+
+  flushCounters();
 
   if (!landmarks) {
     handMissingFrames += 1;
@@ -427,6 +527,7 @@ function loop() {
   }
 
   handMissingFrames = 0;
+  counters.handFrames += 1;
   if (!state.handVisible) patchState({ handVisible: true });
 
   const tip = landmarks[8];
@@ -548,7 +649,11 @@ export const tracker = {
     });
 
     try {
-      await Promise.race([this._connectCamera(deviceId ?? readPreferredCamera() ?? undefined), timeout]);
+      const attempt = ++startAttempt;
+      await Promise.race([
+        this._connectCamera(deviceId ?? readPreferredCamera() ?? undefined, attempt),
+        timeout,
+      ]);
       return true;
     } catch (error) {
       const message = timedOut
@@ -564,7 +669,7 @@ export const tracker = {
     }
   },
 
-  async _connectCamera(deviceId?: string) {
+  async _connectCamera(deviceId: string | undefined, attempt: number) {
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error('This browser has no camera access.');
     }
@@ -583,7 +688,25 @@ export const tracker = {
     el.srcObject = stream;
     await el.play();
 
-    landmarker = await createLandmarker();
+    // Built into a local first. A start that has already been abandoned - the
+    // timeout fired while the model was downloading - must not resurrect
+    // itself: it would restart the loop against a stream whose tracks are
+    // stopped and leave the state reading "ready" while nothing worked. It
+    // must also not touch the shared `landmarker`, because by the time it
+    // finishes a *newer* start may have succeeded and put a working one there.
+    const built = await createLandmarker();
+    if (attempt !== startAttempt) {
+      built.close?.();
+      throw new Error('Camera start was superseded.');
+    }
+    landmarker = built;
+
+    counters.framesSeen = 0;
+    counters.framesProcessed = 0;
+    counters.handFrames = 0;
+    counters.detectError = null;
+    patchState({ diagnostics: { ...state.diagnostics, modelReady: true } });
+
     lastVideoTime = -1;
     handMissingFrames = 0;
     filterX.reset();
@@ -596,6 +719,11 @@ export const tracker = {
   },
 
   stopCamera() {
+    // Any start still in flight is now abandoned. Without this, a start that
+    // timed out would finish its model download minutes later and restart the
+    // loop against a stream whose tracks are already stopped - the state would
+    // read "ready" while nothing worked at all.
+    startAttempt += 1;
     cancelAnimationFrame(rafId);
     rafId = 0;
     stream?.getTracks().forEach((track) => track.stop());
