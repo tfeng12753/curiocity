@@ -56,6 +56,33 @@ export interface TrackerState {
   onboarded: boolean;
 }
 
+/*
+  Which camera to open. `facingMode: 'user'` picks one for you, and on a
+  machine with several - an external webcam, OBS's virtual camera, a Mac
+  handing over to an iPhone via Continuity - it regularly picks the wrong one
+  and the student sees a black rectangle or somebody else's desk. Settings lets
+  them choose, and the choice is remembered, because a camera fix that has to
+  be repeated on every visit is not a fix.
+*/
+const CAMERA_KEY = 'curio.camera.deviceId';
+
+function readPreferredCamera(): string | null {
+  try {
+    return localStorage.getItem(CAMERA_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writePreferredCamera(deviceId: string | null) {
+  try {
+    if (deviceId) localStorage.setItem(CAMERA_KEY, deviceId);
+    else localStorage.removeItem(CAMERA_KEY);
+  } catch {
+    /* private browsing - the choice still holds for this visit */
+  }
+}
+
 const WASM_LOCAL = '/mediapipe/wasm';
 const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm';
 const MODEL_URL =
@@ -473,8 +500,39 @@ export const tracker = {
     patchState({ mode: 'pointer', status: 'idle', handVisible: false, error: reason ?? null });
   },
 
-  async startCamera(): Promise<boolean> {
-    if (state.status === 'ready' && state.mode === 'hand') return true;
+  /** The camera the student last chose, if any. */
+  preferredCamera: () => readPreferredCamera(),
+
+  /**
+   * Cameras this browser will admit to having. Labels are only populated once
+   * permission has been granted at least once, so before that this returns
+   * entries named "Camera 1", "Camera 2" - which is a browser privacy rule,
+   * not a bug to work around.
+   */
+  async listCameras(): Promise<{ deviceId: string; label: string }[]> {
+    try {
+      const devices = await navigator.mediaDevices?.enumerateDevices?.();
+      return (devices ?? [])
+        .filter((device) => device.kind === 'videoinput')
+        .map((device, index) => ({
+          deviceId: device.deviceId,
+          label: device.label || `Camera ${index + 1}`,
+        }));
+    } catch {
+      return [];
+    }
+  },
+
+  /** Stops and restarts the stream - the usual cure for a feed that has stalled. */
+  async restartCamera(deviceId?: string): Promise<boolean> {
+    this.stopCamera();
+    patchState({ status: 'idle' });
+    return this.startCamera(deviceId);
+  },
+
+  async startCamera(deviceId?: string): Promise<boolean> {
+    if (deviceId !== undefined) writePreferredCamera(deviceId || null);
+    if (state.status === 'ready' && state.mode === 'hand' && deviceId === undefined) return true;
     patchState({ status: 'starting', error: null });
 
     // getUserMedia can hang instead of rejecting (an OS-level block that never
@@ -490,7 +548,7 @@ export const tracker = {
     });
 
     try {
-      await Promise.race([this._connectCamera(), timeout]);
+      await Promise.race([this._connectCamera(deviceId ?? readPreferredCamera() ?? undefined), timeout]);
       return true;
     } catch (error) {
       const message = timedOut
@@ -506,14 +564,21 @@ export const tracker = {
     }
   },
 
-  async _connectCamera() {
+  async _connectCamera(deviceId?: string) {
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error('This browser has no camera access.');
     }
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-      audio: false,
-    });
+
+    const video: MediaTrackConstraints = {
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      // A remembered camera can be unplugged by the time we ask for it again,
+      // so `exact` would throw where the default would have worked. Preferring
+      // it and letting the browser fall back keeps a stale choice harmless.
+      ...(deviceId ? { deviceId: { ideal: deviceId } } : { facingMode: 'user' }),
+    };
+
+    stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
     const el = ensureVideo();
     el.srcObject = stream;
     await el.play();

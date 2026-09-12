@@ -429,3 +429,101 @@
     height: auto;
   }
 }
+
+/* ------------------------------------------------------- camera settings */
+
+.camera-settings__status {
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  background: var(--violet-050);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.camera-settings__status--on {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.camera-settings__status--starting {
+  background: var(--nudge-soft);
+  color: var(--nudge);
+}
+
+.camera-settings__status--error {
+  background: #ffe8ee;
+  color: #c62a55;
+}
+
+.camera-settings__preview {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  background: #241a56;
+  aspect-ratio: 4 / 3;
+  margin-bottom: 10px;
+}
+
+.camera-settings__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Mirrored: an unmirrored self-view makes people reach the wrong way. */
+  transform: scaleX(-1);
+  display: block;
+}
+
+.camera-settings__empty {
+  margin: 0 0 10px;
+  padding: 18px 16px;
+  border-radius: var(--r-md);
+  border: 2px dashed var(--violet-200);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.camera-settings__error {
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  background: #ffe8ee;
+  color: #c62a55;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.camera-settings__picker {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.camera-settings__picker span {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.camera-settings__picker select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--violet-200);
+  border-radius: var(--r-sm);
+  background: #fff;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.camera-settings__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

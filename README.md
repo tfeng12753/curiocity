@@ -163,9 +163,24 @@ proxy offline, `src/ai/curio.ts` returns `null` and every caller falls back
 to written copy; narration falls back to the browser's own speech synthesis.
 AI only ever *upgrades* what a child sees — it never gates it.
 
-**Anyone can switch the paid parts off**, from the ⚙️ in the top bar — no
-redeploy, and nothing is lost but the polish. `src/state/settings.ts` holds two
-choices, saved per device:
+**The ⚙️ in the top bar is where a session gets fixed.** It opens on the camera,
+because that's what goes wrong:
+
+- A **live self-view** — the only real proof the camera works. A green "ready"
+  label is equally true of a lens pointing at a closed lid, of the wrong camera,
+  and of a stream that stalled a minute ago.
+- A **camera picker**, shown when there's more than one. `facingMode: 'user'`
+  regularly picks the wrong one on a machine with an external webcam, OBS's
+  virtual camera, or a Mac handing over to an iPhone via Continuity — and the
+  choice is remembered, because a fix you repeat every visit isn't a fix.
+- **Restart camera**, the usual cure for a stalled feed.
+- The same **diagnostics** as the first-run gate (secure context, browser
+  support, permission state with the exact fix, cameras detected) — they matter
+  more here, since this is where you go *after* the camera has let you down.
+
+**And the paid parts can be switched off** from the same panel — no redeploy,
+and nothing is lost but the polish. `src/state/settings.ts` holds two choices,
+saved per device:
 
 - **Curio's voice** — her real voice (credits), the device's own speech
   synthesis (free, robotic), or no talking at all (her lines stay on screen)

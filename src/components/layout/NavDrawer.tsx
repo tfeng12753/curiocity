@@ -7,6 +7,7 @@ import { PetGlyph, PlayerCharacter } from '../player/PlayerCharacter';
 import { sfx } from '../../audio/sound';
 import { settings, type VoiceMode } from '../../state/settings';
 import { useSettings } from '../../hooks/useSettings';
+import { CameraSettings } from '../../tracker/CameraSettings';
 import type { NavPanel } from './TopNav';
 import './layout.css';
 
@@ -267,9 +268,14 @@ function SettingsPanel() {
     <>
       <h2>Settings</h2>
       <p className="drawer__sub">
-        Curio can talk out loud and answer questions of her own. Both use an online
-        service, so you can turn them down here - everything still works without them.
+        Check the camera is seeing you, and decide how much of Curio is switched on.
+        She can talk out loud and answer questions of her own; both use an online
+        service, so you can turn them down here and everything still works.
       </p>
+
+      <section className="drawer__city">
+        <CameraSettings />
+      </section>
 
       <section className="drawer__city">
         <div className="drawer__city-head">
