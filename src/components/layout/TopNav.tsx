@@ -4,7 +4,7 @@ import { useProgress } from '../../state/progress';
 import { Logo } from './Logo';
 import './layout.css';
 
-export type NavPanel = 'progress' | 'achievements' | null;
+export type NavPanel = 'progress' | 'achievements' | 'customize' | null;
 
 interface TopNavProps {
   onHome: () => void;
@@ -14,7 +14,7 @@ interface TopNavProps {
 }
 
 export function TopNav({ onHome, openPanel, onOpenPanel, compact = false }: TopNavProps) {
-  const { totalComplete, totalLevels } = useProgress();
+  const { totalComplete, totalLevels, coins } = useProgress();
   const [muted, setMuted] = useState(sfx.isMuted());
 
   useEffect(() => sfx.subscribe(setMuted), []);
@@ -46,9 +46,18 @@ export function TopNav({ onHome, openPanel, onOpenPanel, compact = false }: TopN
         >
           Achievements
         </button>
+        <button
+          className={`topnav__link ${openPanel === 'customize' ? 'is-active' : ''}`}
+          onClick={() => onOpenPanel(openPanel === 'customize' ? null : 'customize')}
+        >
+          Customize
+        </button>
       </nav>
 
       <div className="topnav__right">
+        <span className="pill topnav__score" title="Coins earned">
+          🪙 {coins}
+        </span>
         <span className="pill topnav__score" title="Levels completed">
           ⭐ {totalComplete} / {totalLevels}
         </span>

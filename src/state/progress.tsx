@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { CITIES, CITY_ORDER, TOTAL_LEVELS, type CityId } from '../data/cities';
 import type { VehicleId } from '../data/vehicles';
+import { COSMETICS, DEFAULT_COSMETICS, defaultEquipped, type CosmeticId, type CosmeticSlot } from '../data/cosmetics';
 
 export interface BadgeDefinition {
   id: string;
@@ -55,6 +56,8 @@ interface ProgressState {
   badges: string[];
   coins: number;
   unlockedVehicles: VehicleId[];
+  unlockedCosmetics: CosmeticId[];
+  equippedCosmetics: Partial<Record<CosmeticSlot, CosmeticId>>;
 }
 
 interface ProgressContextValue extends ProgressState {
@@ -66,27 +69,50 @@ interface ProgressContextValue extends ProgressState {
   cityProgress: (cityId: CityId) => { done: number; total: number };
   totalComplete: number;
   totalLevels: number;
+  /** Spends coins to unlock a cosmetic; no-ops if already owned or unaffordable. */
+  unlockCosmetic: (id: CosmeticId) => void;
+  /** Equips an already-unlocked cosmetic into its slot. */
+  equipCosmetic: (id: CosmeticId) => void;
   reset: () => void;
 }
 
 const STORAGE_KEY = 'learnverse.progress.v1';
 const ProgressContext = createContext<ProgressContextValue | null>(null);
 
+function freshState(): ProgressState {
+  return {
+    completed: [],
+    badges: [],
+    coins: 0,
+    unlockedVehicles: [],
+    unlockedCosmetics: DEFAULT_COSMETICS,
+    equippedCosmetics: defaultEquipped(),
+  };
+}
+
 function load(): ProgressState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { completed: [], badges: [], coins: 0, unlockedVehicles: [] };
+    if (!raw) return freshState();
     const parsed = JSON.parse(raw) as Partial<ProgressState>;
     return {
       completed: Array.isArray(parsed.completed) ? parsed.completed : [],
       badges: Array.isArray(parsed.badges) ? parsed.badges : [],
-      // Both new to this version of the schema - older saved progress simply
+      // All new to this version of the schema - older saved progress simply
       // won't have them yet, so they default in rather than wiping anything.
       coins: typeof parsed.coins === 'number' ? parsed.coins : 0,
       unlockedVehicles: Array.isArray(parsed.unlockedVehicles) ? parsed.unlockedVehicles : [],
+      unlockedCosmetics:
+        Array.isArray(parsed.unlockedCosmetics) && parsed.unlockedCosmetics.length > 0
+          ? parsed.unlockedCosmetics
+          : DEFAULT_COSMETICS,
+      equippedCosmetics:
+        parsed.equippedCosmetics && typeof parsed.equippedCosmetics === 'object'
+          ? { ...defaultEquipped(), ...parsed.equippedCosmetics }
+          : defaultEquipped(),
     };
   } catch {
-    return { completed: [], badges: [], coins: 0, unlockedVehicles: [] };
+    return freshState();
   }
 }
 
@@ -126,6 +152,27 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const unlockCosmetic = useCallback((id: CosmeticId) => {
+    setState((prev) => {
+      if (prev.unlockedCosmetics.includes(id)) return prev;
+      const item = COSMETICS[id];
+      if (!item || prev.coins < item.coinCost) return prev;
+      return {
+        ...prev,
+        coins: prev.coins - item.coinCost,
+        unlockedCosmetics: [...prev.unlockedCosmetics, id],
+      };
+    });
+  }, []);
+
+  const equipCosmetic = useCallback((id: CosmeticId) => {
+    setState((prev) => {
+      const item = COSMETICS[id];
+      if (!item || !prev.unlockedCosmetics.includes(id)) return prev;
+      return { ...prev, equippedCosmetics: { ...prev.equippedCosmetics, [item.slot]: id } };
+    });
+  }, []);
+
   const value = useMemo<ProgressContextValue>(() => {
     const isLevelComplete = (cityId: CityId, levelId: string) =>
       state.completed.includes(key(cityId, levelId));
@@ -141,6 +188,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       awardBadge,
       isLevelComplete,
       isLevelUnlocked,
+      unlockCosmetic,
+      equipCosmetic,
       cityProgress: (cityId: CityId) => ({
         done: CITIES[cityId].levels.filter((level) => isLevelComplete(cityId, level.id)).length,
         total: CITIES[cityId].levels.length,
@@ -151,9 +200,9 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         0,
       ),
       totalLevels: TOTAL_LEVELS,
-      reset: () => setState({ completed: [], badges: [], coins: 0, unlockedVehicles: [] }),
+      reset: () => setState(freshState()),
     };
-  }, [state, completeLevel, awardBadge]);
+  }, [state, completeLevel, awardBadge, unlockCosmetic, equipCosmetic]);
 
   return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;
 }
