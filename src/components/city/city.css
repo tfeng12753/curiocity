@@ -88,35 +88,6 @@
   pointer-events: none;
 }
 
-.city__stamp {
-  /* The HUD already shows "Your progress: x / y", and the bottom-left corner
-     is now where the below-road destination row lives. */
-  display: none;
-  position: absolute;
-  left: 26px;
-  bottom: 26px;
-  z-index: 20;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  border-radius: var(--r-pill);
-  background: var(--city-main);
-  color: #fff;
-  box-shadow: 0 6px 0 var(--city-deep), var(--shadow-md);
-  font-family: var(--font-display);
-  font-weight: 800;
-}
-
-.city__stamp small {
-  display: block;
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  opacity: 0.85;
-  font-family: var(--font-body);
-}
-
 .city__hint {
   position: absolute;
   right: 26px;
@@ -249,15 +220,15 @@
   }
 }
 
-@media (max-width: 900px) {
+/* Matches the `compact` breakpoint CityScene.tsx uses to switch to the
+   scrollable list layout (narrow width OR short height) - this has to stay
+   in sync with that JS condition, since these rules are what make the list
+   layout's HUD/subtitle actually fit instead of still assuming the wide
+   road-map's fixed-pixel vertical spacing. */
+@media (max-width: 900px), (max-height: 820px) {
   .city {
     overflow-y: auto;
     overflow-x: hidden;
-  }
-  /* Redundant with the "Your progress" pill in the HUD, and fighting for
-     the same fixed bottom-left corner as scrolled list content. */
-  .city__stamp {
-    display: none;
   }
 
   /* The HUD and subtitle are absolutely positioned assuming one short row of

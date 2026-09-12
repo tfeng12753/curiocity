@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { sfx } from '../../audio/sound';
-import { CameraGate } from '../../tracker/CameraGate';
 import { CameraStage } from '../../tracker/CameraStage';
 import { AirTrail } from '../../tracker/AirTrail';
+import { TrackerModeControl } from '../../tracker/TrackerModeControl';
 import { tracker } from '../../tracker/trackerStore';
 import { useTrackerState } from '../../tracker/useTracker';
 import { FractionTask } from './FractionTask';
@@ -30,7 +30,6 @@ interface FractionLessonProps {
 
 export function FractionLesson({ onExit, onKeepExploring }: FractionLessonProps) {
   const [index, setIndex] = useState(0);
-  const [gateOpen, setGateOpen] = useState(true);
   const { mode, status } = useTrackerState();
 
   const scenes = useMemo<Scene[]>(
@@ -272,7 +271,6 @@ export function FractionLesson({ onExit, onKeepExploring }: FractionLessonProps)
   const scene = scenes[index];
   const isChallenge = Boolean(scene.challenge);
   const isComplete = scene.id === 'complete';
-  const showGate = gateOpen && index >= 1 && !isComplete;
   const cameraActive = mode === 'hand' && status === 'ready';
 
   useEffect(() => {
@@ -282,12 +280,6 @@ export function FractionLesson({ onExit, onKeepExploring }: FractionLessonProps)
   const next = () => {
     sfx.play('tap');
     setIndex((current) => Math.min(current + 1, scenes.length - 1));
-  };
-
-  const backToPointer = () => {
-    tracker.stopCamera();
-    tracker.usePointer();
-    sfx.play('tap');
   };
 
   return (
@@ -320,18 +312,7 @@ export function FractionLesson({ onExit, onKeepExploring }: FractionLessonProps)
           </div>
 
           <div className="lesson__tools">
-            <div className="lesson__tool-buttons">
-              <span className="pill">{cameraActive ? '✋ Finger' : '🖱️ Pointer'} mode</span>
-              {cameraActive ? (
-                <button className="btn btn--ghost btn--sm" onClick={backToPointer}>
-                  Use pointer
-                </button>
-              ) : (
-                <button className="btn btn--ghost btn--sm" onClick={() => setGateOpen(true)}>
-                  Use camera
-                </button>
-              )}
-            </div>
+            <TrackerModeControl />
           </div>
         </header>
       )}
@@ -350,10 +331,6 @@ export function FractionLesson({ onExit, onKeepExploring }: FractionLessonProps)
           </motion.div>
         </AnimatePresence>
       </div>
-
-      <AnimatePresence>
-        {showGate && <CameraGate key="gate" onDone={() => setGateOpen(false)} />}
-      </AnimatePresence>
     </motion.div>
   );
 }

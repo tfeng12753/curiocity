@@ -140,7 +140,7 @@ export function SceneRecognition({ onNext }: { onNext: () => void }) {
             </button>
           </DwellTarget>
         ) : (
-          <span className="dialogue__hint">Point at a picture and poke forward (or click) to choose.</span>
+          <span className="dialogue__hint">Point at a picture and open your hand (or click) to choose.</span>
         )}
       </DialogueBox>
     </div>

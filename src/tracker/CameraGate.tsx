@@ -51,6 +51,36 @@ function HandIllustration() {
   );
 }
 
+/**
+ * An open hand, all five fingers spread - the "select" gesture. Drawn
+ * distinctly from HandIllustration's pointing fist (only one finger raised)
+ * so the two are never confused: this one is unmistakably "open".
+ */
+function OpenPalmIllustration() {
+  return (
+    <svg viewBox="0 0 120 120" width="104" height="104" aria-hidden="true">
+      <g stroke="#e8a878" strokeWidth="2" strokeLinejoin="round">
+        {/* palm */}
+        <rect x="34" y="56" width="46" height="48" rx="19" fill="#ffd6b8" />
+        {/* thumb, splayed out to the side */}
+        <rect x="14" y="52" width="16" height="34" rx="8" fill="#ffc9a4" transform="rotate(-40 22 69)" />
+        {/* four fingers, fanned out from the knuckle line */}
+        <rect x="30" y="18" width="15" height="44" rx="7.5" fill="#ffd6b8" transform="rotate(-14 37 40)" />
+        <rect x="48" y="10" width="15" height="52" rx="7.5" fill="#ffd6b8" />
+        <rect x="65" y="14" width="14" height="46" rx="7" fill="#ffd6b8" transform="rotate(10 72 37)" />
+        <rect x="80" y="24" width="13" height="36" rx="6.5" fill="#ffd6b8" transform="rotate(22 86 42)" />
+      </g>
+
+      {/* a little sparkle burst to read as "go" / "select" */}
+      <g stroke="var(--sun-500)" strokeWidth="4" strokeLinecap="round" opacity="0.9">
+        <path d="M55 8 L55 1" />
+        <path d="M40 10 L35 3" />
+        <path d="M70 10 L75 3" />
+      </g>
+    </svg>
+  );
+}
+
 interface Diagnostics {
   secureContext: boolean;
   hasMediaDevices: boolean;
@@ -139,7 +169,10 @@ export function CameraGate({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     if (phase === 'ready' && handVisible) {
       sfx.play('success');
-      const id = setTimeout(onDone, 700);
+      const id = setTimeout(() => {
+        tracker.markOnboarded();
+        onDone();
+      }, 700);
       return () => clearTimeout(id);
     }
     return undefined;
@@ -171,17 +204,18 @@ export function CameraGate({ onDone }: { onDone: () => void }) {
         transition={{ type: 'spring', stiffness: 220, damping: 22 }}
       >
         <div className="camera-gate__hand">
-          <HandIllustration />
+          {phase === 'ready' ? <OpenPalmIllustration /> : <HandIllustration />}
         </div>
 
         {phase === 'ask' && (
           <>
-            <span className="eyebrow">Fraction Workshop</span>
+            <span className="eyebrow">Curio-City</span>
             <h2>Ready to interact?</h2>
             <p>
-              This lesson lets you point with your <strong>index finger</strong> and poke forward to
-              cut and colour things on screen. Turn on your camera, or use your mouse instead - both
-              work.
+              This whole world can be played with your <strong>index finger</strong> - point to move
+              around, then open your whole hand, like a high five, to select things. It works
+              everywhere in Curio-City, not just in lessons. Turn on your camera, or use your mouse
+              instead - both work, and you'll only see this once.
             </p>
             <div className="camera-gate__actions">
               <button className="btn btn--lg" onClick={startCamera}>
@@ -216,8 +250,8 @@ export function CameraGate({ onDone }: { onDone: () => void }) {
             <span className="eyebrow">Camera ready</span>
             <h2>Show your hand</h2>
             <p>
-              Hold your hand up to the camera. Point with your <strong>index finger</strong>, then
-              poke forward like you're pressing a button - that's how you'll select things.
+              Hold your hand up to the camera. Point with your <strong>index finger</strong> to move
+              around, then open your whole hand, like a high five, to select things.
             </p>
             <div className="camera-gate__actions">
               <button className="btn btn--city" onClick={() => { tracker.markOnboarded(); onDone(); }}>

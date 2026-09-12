@@ -137,13 +137,13 @@ export function InteractiveSurface({
       const pinchStarted = sample.pinching && !pinchRef.current;
       pinchRef.current = sample.pinching;
 
-      // A forward poke - jabbing the fingertip toward the camera - is the
-      // primary way to commit; sample.poking is already a one-shot rising
-      // edge (see trackerStore's detectPoke), so no extra edge-tracking
-      // needed here. The dwell hold and pinch both stay as fallbacks for
-      // whenever a poke doesn't register cleanly.
+      // Opening the hand - spreading the fingers after pointing or making a
+      // fist - is the primary way to commit; sample.activate is already a
+      // one-shot rising edge (see trackerStore's detectPalmOpen), so no
+      // extra edge-tracking needed here. The dwell hold and pinch both stay
+      // as fallbacks for whenever the gesture doesn't register cleanly.
       const elapsed = now - dwellStartRef.current;
-      const ready = elapsed >= dwellMs || pinchStarted || sample.poking;
+      const ready = elapsed >= dwellMs || pinchStarted || sample.activate;
 
       if (!ready) {
         tracker.setDwell(elapsed / dwellMs);

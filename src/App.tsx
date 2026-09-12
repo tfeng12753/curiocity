@@ -11,7 +11,9 @@ import { FractionLesson3 } from './components/lesson/FractionLesson3';
 import { TopNav, type NavPanel } from './components/layout/TopNav';
 import { NavDrawer } from './components/layout/NavDrawer';
 import { FingerCursor } from './tracker/FingerCursor';
-import { tracker } from './tracker/trackerStore';
+import { CameraGate } from './tracker/CameraGate';
+import { TrackerModeControl } from './tracker/TrackerModeControl';
+import { useTrackerState } from './tracker/useTracker';
 
 interface LessonProps {
   onExit: () => void;
@@ -34,17 +36,19 @@ type View =
 export function App() {
   const [view, setView] = useState<View>({ name: 'world' });
   const [panel, setPanel] = useState<NavPanel>(null);
+  const { onboarded } = useTrackerState();
 
+  // Camera/hand mode, once chosen, now follows the student around the whole
+  // site instead of being reset back to pointer on every navigation - this
+  // used to force pointer mode on every world/city visit, which is exactly
+  // why hand tracking felt lesson-only rather than something the rest of
+  // the site could be played with too.
   const goWorld = useCallback(() => {
-    tracker.stopCamera();
-    tracker.usePointer();
     setPanel(null);
     setView({ name: 'world' });
   }, []);
 
   const goCity = useCallback((cityId: CityId) => {
-    tracker.stopCamera();
-    tracker.usePointer();
     setPanel(null);
     setView({ name: 'city', cityId });
   }, []);
@@ -91,7 +95,14 @@ export function App() {
           {panel && <NavDrawer key={panel} panel={panel} onClose={() => setPanel(null)} />}
         </AnimatePresence>
 
-        <FingerCursor active={view.name === 'lesson'} />
+        {/* The character cursor and its mode toggle live at the app root, not
+            inside any one screen, so hand-tracking (once taught) works the
+            same way on the world map, a city, an entrance screen, or a
+            lesson - not just lessons. */}
+        <FingerCursor active={onboarded} />
+        {view.name !== 'lesson' && <TrackerModeControl className="tracker-mode--floating" />}
+
+        <AnimatePresence>{!onboarded && <CameraGate key="onboarding" onDone={() => {}} />}</AnimatePresence>
       </div>
     </ProgressProvider>
   );

@@ -103,10 +103,15 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
   const { done, total } = cityProgress(cityId);
   const [toast, setToast] = useState<string | null>(null);
   // The absolute-positioned map has `overflow: hidden` and node positions
-  // tuned for wide screens, so anything narrower than that doesn't just look
-  // cramped - it can clip destinations off-screen with no way to scroll to
-  // them. Same breakpoint WorldScene already uses for its own narrow layout.
-  const narrow = useMediaQuery('(max-width: 900px)');
+  // tuned for wide, tall screens, so it doesn't just look cramped below that
+  // - the fixed-pixel HUD/subtitle/stage offsets stop leaving enough room
+  // and destination cards start overlapping the header or spilling off the
+  // bottom edge with no way to scroll to them. The narrow-width breakpoint
+  // matches WorldScene's own narrow layout; the height one catches the same
+  // problem on a short-but-wide window (a laptop with a shallow browser
+  // window, not just a phone). Below either, fall back to the plain
+  // scrollable list, which has no such fixed-height assumptions.
+  const compact = useMediaQuery('(max-width: 900px), (max-height: 820px)');
 
   const showToast = (message: string) => {
     sfx.play('retry');
@@ -170,7 +175,7 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
 
       <p className="city__subtitle">{city.blurb}</p>
 
-      {narrow ? (
+      {compact ? (
         <div className="city__list">
           {(city.chapters ?? [null]).map((chapter) => {
             const levelsInChapter = chapter
@@ -285,14 +290,6 @@ export function CityScene({ cityId, onBack, onOpenLevel }: CitySceneProps) {
           })}
         </div>
       )}
-
-      <div className="city__stamp">
-        <span style={{ fontSize: '1.4rem' }}>⭐</span>
-        <span>
-          <small>Completed</small>
-          {done} / {total}
-        </span>
-      </div>
 
       <div className="city__hint">
         {city.status === 'playable'

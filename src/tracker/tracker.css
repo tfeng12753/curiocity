@@ -31,8 +31,8 @@
    it anchors on PlayerCharacter's HAND_ANCHOR (its reaching fingertip) so the
    hand - the part that actually "touches" things - sits on the tracked
    point instead of the body. `translate` is its own CSS property, separate
-   from `transform`, so this stacks cleanly with the scale/poke animations
-   below instead of fighting them for the same property. */
+   from `transform`, so this stacks cleanly with the scale/activate
+   animations below instead of fighting them for the same property. */
 .finger-cursor__character {
   position: absolute;
   top: 50%;
@@ -72,16 +72,16 @@
   animation: cursor-search 1.4s ease-in-out infinite;
 }
 
-.finger-cursor.is-poking .finger-cursor__character {
-  animation: cursor-poke 0.26s ease-out;
+.finger-cursor.is-activating .finger-cursor__character {
+  animation: cursor-activate 0.26s ease-out;
 }
 
-.finger-cursor.is-poking .finger-cursor__halo {
-  animation: cursor-poke-halo 0.26s ease-out;
+.finger-cursor.is-activating .finger-cursor__halo {
+  animation: cursor-activate-halo 0.26s ease-out;
   transform-origin: 32px 32px;
 }
 
-@keyframes cursor-poke {
+@keyframes cursor-activate {
   0% {
     transform: scale(1);
   }
@@ -93,7 +93,7 @@
   }
 }
 
-@keyframes cursor-poke-halo {
+@keyframes cursor-activate-halo {
   0% {
     transform: scale(1);
     opacity: 1;
@@ -343,6 +343,57 @@
   height: 100vh;
   z-index: 8500;
   pointer-events: none;
+}
+
+/* --------------------------------------------------------- mode control */
+
+.tracker-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.tracker-mode__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tracker-mode__error {
+  max-width: 220px;
+  text-align: right;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #8a5a00;
+  background: var(--nudge-soft);
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+}
+
+/* The floating badge shown on every non-lesson screen, so switching modes
+   (and seeing which one is active) isn't a lesson-only feature. Lesson HUDs
+   render the same component inline instead, without this fixed wrapper. */
+.tracker-mode--floating {
+  position: fixed;
+  left: 22px;
+  bottom: 22px;
+  z-index: 45;
+  align-items: flex-start;
+}
+
+.tracker-mode--floating .tracker-mode__error {
+  text-align: left;
+}
+
+/* Camera-driven hand tracking assumes a webcam the way a phone/tablet in
+   portrait use typically doesn't, and at this width the badge has nowhere
+   to sit without overlapping scrolled page content (the narrow city list,
+   in particular). Pointer/touch already works everywhere without it. */
+@media (max-width: 860px) {
+  .tracker-mode--floating {
+    display: none;
+  }
 }
 
 /* ------------------------------------------------------------ dwell target */

@@ -1,0 +1,50 @@
+import { sfx } from '../audio/sound';
+import { tracker } from './trackerStore';
+import { useTrackerState } from './useTracker';
+
+interface TrackerModeControlProps {
+  /** Lets a host (e.g. the lesson HUD) lay this out inline instead of as a
+   *  standalone floating badge. */
+  className?: string;
+}
+
+/**
+ * The one place that shows which input mode is active and lets the student
+ * switch it. Camera onboarding (CameraGate) only teaches the gesture once,
+ * ever - after that, turning the camera on or back off again is just this
+ * plain toggle, available everywhere in the app rather than re-explaining
+ * itself on every screen.
+ */
+export function TrackerModeControl({ className }: TrackerModeControlProps) {
+  const { mode, status, error } = useTrackerState();
+  const active = mode === 'hand' && status === 'ready';
+
+  const backToPointer = () => {
+    tracker.stopCamera();
+    tracker.usePointer();
+    sfx.play('tap');
+  };
+
+  const useCamera = () => {
+    sfx.play('tap');
+    void tracker.startCamera();
+  };
+
+  return (
+    <div className={`tracker-mode ${className ?? ''}`}>
+      <div className="tracker-mode__row">
+        <span className="pill">{active ? '✋ Finger' : status === 'starting' ? '⏳ Starting' : '🖱️ Pointer'} mode</span>
+        {active ? (
+          <button className="btn btn--ghost btn--sm" onClick={backToPointer}>
+            Use pointer
+          </button>
+        ) : (
+          <button className="btn btn--ghost btn--sm" onClick={useCamera} disabled={status === 'starting'}>
+            Use camera
+          </button>
+        )}
+      </div>
+      {status === 'error' && error && <span className="tracker-mode__error">{error}</span>}
+    </div>
+  );
+}

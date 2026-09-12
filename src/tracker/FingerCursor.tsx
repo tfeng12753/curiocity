@@ -13,7 +13,8 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * 26;
  * cursor stream the reticle used, so "a character that matches your
  * movement" needed no new tracking, just a different thing drawn at the
  * point that was already being tracked. In hand mode the ring fills while
- * they hold still (dwell = "press"), and a poke makes the character hop.
+ * they hold still (dwell = "press"), and opening the hand makes the
+ * character hop, the same way a poke used to.
  */
 export function FingerCursor({ active }: { active: boolean }) {
   const { mode, handVisible } = useTrackerState();
@@ -25,21 +26,21 @@ export function FingerCursor({ active }: { active: boolean }) {
     if (!active) return;
     let frame = 0;
     let target = { x: window.innerWidth / 2, y: window.innerHeight / 2, visible: false };
-    let pokeTimeout: ReturnType<typeof setTimeout> | undefined;
+    let activateTimeout: ReturnType<typeof setTimeout> | undefined;
 
     const unsubscribeCursor = tracker.subscribeCursor((sample) => {
       target = { x: sample.x, y: sample.y, visible: sample.visible };
-      if (sample.poking) {
+      if (sample.activate) {
         const root = rootRef.current;
         if (root) {
-          root.classList.remove('is-poking');
-          // Forces the animation to restart even if a previous poke's timeout
-          // hasn't cleared the class yet.
+          root.classList.remove('is-activating');
+          // Forces the animation to restart even if a previous commit's
+          // timeout hasn't cleared the class yet.
           void root.offsetWidth;
-          root.classList.add('is-poking');
+          root.classList.add('is-activating');
         }
-        clearTimeout(pokeTimeout);
-        pokeTimeout = setTimeout(() => rootRef.current?.classList.remove('is-poking'), 260);
+        clearTimeout(activateTimeout);
+        activateTimeout = setTimeout(() => rootRef.current?.classList.remove('is-activating'), 260);
       }
     });
 
@@ -61,7 +62,7 @@ export function FingerCursor({ active }: { active: boolean }) {
 
     return () => {
       cancelAnimationFrame(frame);
-      clearTimeout(pokeTimeout);
+      clearTimeout(activateTimeout);
       unsubscribeCursor();
       unsubscribeDwell();
     };

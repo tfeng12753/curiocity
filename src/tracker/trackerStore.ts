@@ -24,12 +24,14 @@ export interface CursorSample {
   /** Index finger and thumb held together - an optional "tap" gesture. */
   pinching: boolean;
   /**
-   * True for one sample right when a forward poke (fingertip jabbed toward
-   * the camera, then easing back) is detected - the primary way to commit
-   * in hand mode. Always false in pointer mode, where a click already does
-   * the same job.
+   * True for one sample right when the commit gesture just fired - the
+   * primary way to select things in hand mode. Always false in pointer
+   * mode, where a click already does the same job. Named after the effect
+   * ("activate this"), not the specific gesture, so callers don't need to
+   * know that it currently means "the hand just opened" (see
+   * detectPalmOpen below) rather than, say, a poke.
    */
-  poking: boolean;
+  activate: boolean;
 }
 
 export interface TrackerState {
@@ -46,17 +48,38 @@ const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/was
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 
+/** The onboarding gate ("Ready to interact?") is a once-ever thing, not a
+ *  per-lesson one - remembered across reloads so a returning student who
+ *  already learned the gesture is never asked again. */
+const ONBOARDED_KEY = 'learnverse.onboarded.v1';
+
+function loadOnboarded(): boolean {
+  try {
+    return localStorage.getItem(ONBOARDED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function saveOnboarded() {
+  try {
+    localStorage.setItem(ONBOARDED_KEY, '1');
+  } catch {
+    /* private browsing / storage disabled - onboarding just re-asks next time */
+  }
+}
+
 const cursorListeners = new Set<(sample: CursorSample) => void>();
 const stateListeners = new Set<(state: TrackerState) => void>();
 const dwellListeners = new Set<(progress: number) => void>();
 
-let cursor: CursorSample = { x: 0, y: 0, visible: false, source: 'pointer', pinching: false, poking: false };
+let cursor: CursorSample = { x: 0, y: 0, visible: false, source: 'pointer', pinching: false, activate: false };
 let state: TrackerState = {
   mode: 'pointer',
   status: 'idle',
   handVisible: false,
   error: null,
-  onboarded: false,
+  onboarded: loadOnboarded(),
 };
 let dwell = 0;
 
@@ -70,34 +93,66 @@ let handMissingFrames = 0;
 const filterX = makeOneEuroFilter();
 const filterY = makeOneEuroFilter();
 
-// --- poke detection ---------------------------------------------------
-// MediaPipe's landmark z is depth relative to the wrist, roughly on the same
-// scale as x/y: smaller (more negative) is closer to the camera. A poke is a
-// quick jab toward the camera, so a fast enough drop in z within a short
-// window counts as one - scaled by the hand's own apparent size (handSpan)
-// so it works whether the student is sitting close to or far from the
-// camera. These constants are a starting point, not a calibrated final
-// answer - they can't be tuned against a real camera in this environment.
-const POKE_WINDOW_MS = 250;
-const POKE_COOLDOWN_MS = 450;
-const POKE_DEPTH_RATIO = 0.55;
-let zHistory: { z: number; t: number }[] = [];
-let lastPokeAt = -Infinity;
+// --- "open palm" commit gesture -----------------------------------------
+// A forward poke (jabbing the fingertip toward the camera) turned out to be
+// hard to do reliably - it relies on MediaPipe's z estimate, which is noisy
+// and needs calibrating against how far the student happens to be sitting
+// from the camera. Opening the hand is a much more legible gesture (like
+// releasing something, or a "stop" - easy to demonstrate, easy to repeat)
+// and it's detected purely from 2D landmark ratios, which scale with hand
+// size automatically, so there's nothing to calibrate per-student.
+//
+// A finger counts as "extended" when its fingertip is further from the
+// wrist than its own middle knuckle - true while pointing (index only) or
+// in a loose fist (none), and false-to-true for the other three fingers is
+// exactly what changes when the hand opens. The thumb is left out: its
+// extension direction depends on hand rotation in a way the other fingers'
+// doesn't, and 3-of-4 is already a solid "the hand just opened" signal.
+const OPEN_WINDOW_MS = 400;
+const OPEN_COMMIT_COOLDOWN_MS = 500;
+const OPEN_FINGER_COUNT = 3;
+const EXTENDED_RATIO = 1.15;
+let opennessHistory: { open: boolean; t: number }[] = [];
+let lastActivateAt = -Infinity;
 
-function resetPokeDetector() {
-  zHistory = [];
-  lastPokeAt = -Infinity;
+function resetActivateDetector() {
+  opennessHistory = [];
+  lastActivateAt = -Infinity;
 }
 
-function detectPoke(z: number, handSpan: number, nowMs: number): boolean {
-  zHistory.push({ z, t: nowMs });
-  while (zHistory.length > 1 && nowMs - zHistory[0].t > POKE_WINDOW_MS) zHistory.shift();
-  if (nowMs - lastPokeAt < POKE_COOLDOWN_MS || zHistory.length < 3) return false;
+function isFingerExtended(
+  tip: { x: number; y: number },
+  midJoint: { x: number; y: number },
+  wrist: { x: number; y: number },
+): boolean {
+  const tipDist = Math.hypot(tip.x - wrist.x, tip.y - wrist.y);
+  const jointDist = Math.hypot(midJoint.x - wrist.x, midJoint.y - wrist.y);
+  return tipDist > jointDist * EXTENDED_RATIO;
+}
 
-  const movedToward = zHistory[0].z - z;
-  if (movedToward > handSpan * POKE_DEPTH_RATIO) {
-    lastPokeAt = nowMs;
-    zHistory = [];
+/** How many of the four non-thumb fingers are currently extended (0-4). */
+function countExtendedFingers(landmarks: { x: number; y: number }[]): number {
+  const wrist = landmarks[0];
+  const pairs: [number, number][] = [
+    [8, 6], // index tip, index pip
+    [12, 10], // middle
+    [16, 14], // ring
+    [20, 18], // pinky
+  ];
+  return pairs.reduce((count, [tip, joint]) => count + (isFingerExtended(landmarks[tip], landmarks[joint], wrist) ? 1 : 0), 0);
+}
+
+/** Rising edge: the hand was closed/pointing a moment ago and is open now. */
+function detectPalmOpen(extendedCount: number, nowMs: number): boolean {
+  const isOpen = extendedCount >= OPEN_FINGER_COUNT;
+  opennessHistory.push({ open: isOpen, t: nowMs });
+  while (opennessHistory.length > 1 && nowMs - opennessHistory[0].t > OPEN_WINDOW_MS) opennessHistory.shift();
+  if (nowMs - lastActivateAt < OPEN_COMMIT_COOLDOWN_MS) return false;
+
+  const wasClosed = opennessHistory.some((sample) => !sample.open);
+  if (isOpen && wasClosed) {
+    lastActivateAt = nowMs;
+    opennessHistory = [{ open: true, t: nowMs }];
     return true;
   }
   return false;
@@ -124,7 +179,7 @@ function onPointerMove(event: PointerEvent | MouseEvent) {
     visible: true,
     source: 'pointer',
     pinching: false,
-    poking: false,
+    activate: false,
   });
 }
 
@@ -207,9 +262,9 @@ function loop() {
     if (handMissingFrames > 6 && state.handVisible) {
       filterX.reset();
       filterY.reset();
-      resetPokeDetector();
+      resetActivateDetector();
       patchState({ handVisible: false });
-      emitCursor({ ...cursor, visible: false, source: 'hand', poking: false });
+      emitCursor({ ...cursor, visible: false, source: 'hand', activate: false });
     }
     return;
   }
@@ -235,7 +290,7 @@ function loop() {
     visible: true,
     source: 'hand',
     pinching: pinchDistance / handSpan < 0.55,
-    poking: detectPoke(tip.z, handSpan, now * 1000),
+    activate: detectPalmOpen(countExtendedFingers(landmarks), now * 1000),
   });
 }
 
@@ -276,6 +331,7 @@ export const tracker = {
   },
 
   markOnboarded() {
+    saveOnboarded();
     patchState({ onboarded: true });
   },
 
@@ -333,7 +389,7 @@ export const tracker = {
     handMissingFrames = 0;
     filterX.reset();
     filterY.reset();
-    resetPokeDetector();
+    resetActivateDetector();
     cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(loop);
     patchState({ mode: 'hand', status: 'ready', error: null });
