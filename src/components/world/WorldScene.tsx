@@ -22,14 +22,14 @@ interface Placement {
 /** Island placement on the world stage, as percentages of the viewport. */
 const WIDE_LAYOUT: Record<CityId, Placement> = {
   chemistry: { left: '36%', top: '24%', width: '26%', delay: 1.2, cardBelow: true },
-  math: { left: '7%', top: '41%', width: '31%', delay: 0 },
+  math: { left: '7%', top: '41%', width: '31%', delay: 0, cardBelow: true },
   physics: { left: '62%', top: '43%', width: '31%', delay: 0.6 },
 };
 
 /** Portrait and narrow screens stack the world into a vertical trail instead. */
 const NARROW_LAYOUT: Record<CityId, Placement> = {
   chemistry: { left: '26%', top: '17%', width: '48%', delay: 1.2, cardBelow: true },
-  math: { left: '4%', top: '38%', width: '54%', delay: 0 },
+  math: { left: '4%', top: '38%', width: '54%', delay: 0, cardBelow: true },
   physics: { left: '42%', top: '60%', width: '54%', delay: 0.6 },
 };
 

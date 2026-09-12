@@ -188,6 +188,52 @@
   font-size: 0.92rem;
 }
 
+.camera-gate__diagnostics {
+  margin-top: 16px;
+  text-align: left;
+}
+
+.camera-gate__diagnostics-toggle {
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 6px 0;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: center;
+}
+
+.camera-gate__diagnostics-list {
+  margin-top: 10px;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  background: var(--panel-soft);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.camera-gate__diagnostics-recheck {
+  display: block;
+  margin: 8px auto 0;
+  border: none;
+  background: none;
+  padding: 4px 10px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--violet-600);
+  cursor: pointer;
+}
+
 /* ------------------------------------------------------------ dwell target */
 
 .dwell-target {

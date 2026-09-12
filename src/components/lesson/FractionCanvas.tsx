@@ -120,7 +120,12 @@ export function FractionCanvas({
     (point: SurfacePoint) => {
       if (mode === 'cut') {
         if (atMaxCuts) return;
-        const cut = cutFromPoint(kind, point, { allow, moveAxis: dominantAxis(), targets });
+        // Reuse whatever the dashed guide line is already showing rather than
+        // recomputing the axis fresh: if the pointer paused before the click,
+        // the movement trail behind dominantAxis() can go stale between the
+        // last hover and this commit, letting the committed cut land on a
+        // different axis than the line the student was actually looking at.
+        const cut = preview ?? cutFromPoint(kind, point, { allow, moveAxis: dominantAxis(), targets });
         if (!cut || isDuplicateCut(cuts, cut)) return;
         onCut?.(cut);
         setPreview(null);
@@ -131,7 +136,7 @@ export function FractionCanvas({
         if (region) onToggleRegion?.(region);
       }
     },
-    [mode, kind, allow, targets, cuts, regions, atMaxCuts, onCut, onToggleRegion],
+    [mode, kind, allow, targets, cuts, regions, atMaxCuts, onCut, onToggleRegion, preview],
   );
 
   const guide = preview ? cutGuideLine(kind, preview) : null;
