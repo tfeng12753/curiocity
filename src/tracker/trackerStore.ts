@@ -80,6 +80,14 @@ export interface TrackerDiagnostics {
   detectError: string | null;
   /** Where the model was loaded from, since a blocked CDN is a common cause. */
   modelSource: string | null;
+  /*
+    getUserMedia has resolved and the camera is live. This is true for the
+    whole of the model load, which is the slow part and the part people get
+    stuck in - so the self-view can be shown then rather than after, which is
+    both the proof the camera works and the feedback that something is
+    happening.
+  */
+  streamReady: boolean;
 }
 
 /*
@@ -201,6 +209,7 @@ let state: TrackerState = {
     handFrames: 0,
     detectError: null,
     modelSource: null,
+    streamReady: false,
   },
   onboarded: loadOnboarded(),
 };
@@ -639,12 +648,16 @@ export const tracker = {
     // getUserMedia can hang instead of rejecting (an OS-level block that never
     // surfaces a prompt, or a blocked model download) - a timeout keeps
     // "Warming up the camera" from being a dead end with no way out.
-    const START_TIMEOUT_MS = 15_000;
+    const START_TIMEOUT_MS = 40_000;
     let timedOut = false;
     const timeout = new Promise<never>((_, reject) => {
       setTimeout(() => {
         timedOut = true;
-        reject(new Error('Camera took too long to start. Check your camera permissions and try again.'));
+        reject(
+          new Error(
+            'Hand tracking took too long to start. The hand model may still be downloading - check Settings, and try again.',
+          ),
+        );
       }, START_TIMEOUT_MS);
     });
 
@@ -687,6 +700,7 @@ export const tracker = {
     const el = ensureVideo();
     el.srcObject = stream;
     await el.play();
+    patchState({ diagnostics: { ...state.diagnostics, streamReady: true, modelReady: false } });
 
     // Built into a local first. A start that has already been abandoned - the
     // timeout fired while the model was downloading - must not resurrect
@@ -724,6 +738,9 @@ export const tracker = {
     // loop against a stream whose tracks are already stopped - the state would
     // read "ready" while nothing worked at all.
     startAttempt += 1;
+    patchState({
+      diagnostics: { ...state.diagnostics, streamReady: false, modelReady: false },
+    });
     cancelAnimationFrame(rafId);
     rafId = 0;
     stream?.getTracks().forEach((track) => track.stop());

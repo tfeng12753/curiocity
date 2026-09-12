@@ -45,15 +45,26 @@ function CameraPreview({ streamKey }: { streamKey: number }) {
  * Between a live camera and a moving cursor there are four separate things
  * that can fail while looking identical from the outside.
  */
-function PipelineReport({ diagnostics, live }: { diagnostics: TrackerDiagnostics; live: boolean }) {
-  if (!live) return null;
-
-  const { modelReady, framesSeen, framesProcessed, handFrames, detectError, modelSource } = diagnostics;
+function PipelineReport({ diagnostics }: { diagnostics: TrackerDiagnostics }) {
+  const { modelReady, framesSeen, framesProcessed, handFrames, detectError, modelSource, streamReady } =
+    diagnostics;
+  if (!streamReady) return null;
   const rows = [
     {
+      ok: true,
+      label: 'Camera open',
+      note: undefined,
+    },
+    {
       ok: modelReady,
-      label: modelReady ? 'Hand model loaded' : 'Hand model still loading',
-      note: modelSource?.startsWith('/') ? 'from this site' : modelSource ? 'from Google (slower)' : undefined,
+      label: modelReady ? 'Hand model loaded' : 'Hand model still loading...',
+      note: modelReady
+        ? modelSource?.startsWith('/')
+          ? 'from this site'
+          : modelSource
+            ? 'from Google - slower, and often blocked on school networks'
+            : undefined
+        : 'This is 7.8MB and only downloads once. If it never finishes, your network is probably blocking it.',
     },
     {
       ok: framesSeen > 0,
@@ -96,17 +107,22 @@ export function CameraSettings() {
   const [streamKey, setStreamKey] = useState(0);
 
   const live = mode === 'hand' && status === 'ready';
+  // The stream is live for the whole of the model load, so the self-view can be
+  // shown during the slow part - which is when somebody most needs to see that
+  // the camera itself is fine.
+  const showPreview = diagnostics.streamReady;
 
   const refreshCameras = () => {
     void tracker.listCameras().then(setCameras);
   };
 
   useEffect(refreshCameras, [live]);
+  useEffect(() => setStreamKey((key) => key + 1), [diagnostics.streamReady]);
 
   const start = async (deviceId?: string) => {
     setBusy(true);
     sfx.play('tap');
-    await tracker.restartCamera(deviceId ?? selected ?? undefined);
+    await tracker.restartCamera(deviceId || selected || undefined);
     setStreamKey((key) => key + 1);
     refreshCameras();
     setBusy(false);
@@ -125,7 +141,9 @@ export function CameraSettings() {
         <strong>Camera</strong>
         <span className={`camera-settings__status camera-settings__status--${live ? 'on' : status}`}>
           {status === 'starting'
-            ? 'Starting...'
+            ? diagnostics.streamReady
+              ? 'Loading hand model...'
+              : 'Opening camera...'
             : live
               ? handVisible
                 ? 'Hand detected'
@@ -136,7 +154,7 @@ export function CameraSettings() {
         </span>
       </div>
 
-      {live ? (
+      {showPreview ? (
         <CameraPreview streamKey={streamKey} />
       ) : (
         <p className="camera-settings__empty">
@@ -147,7 +165,7 @@ export function CameraSettings() {
 
       {error && <p className="camera-settings__error">{error}</p>}
 
-      <PipelineReport diagnostics={diagnostics} live={live} />
+      <PipelineReport diagnostics={diagnostics} />
 
       {cameras.length > 1 && (
         <label className="camera-settings__picker">
