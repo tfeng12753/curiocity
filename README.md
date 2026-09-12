@@ -172,11 +172,25 @@ could spend it all:
 
 Past either, the product behaves exactly as it does with no key at all.
 
-> **Narration is the expensive one.** Every dialogue line is a request, and
-> the proxy's in-memory cache is wiped whenever a free Render instance spins
-> down — so a cold start re-synthesises everything. If the quota becomes a
-> problem, caching audio in the browser across sessions is the biggest win
-> available.
+**Narration is cached in the browser.** Curio says the same few dozen lines to
+every child forever, and each one is a paid request. `src/audio/audioCache.ts`
+keeps the MP3s in IndexedDB, so a line is paid for once per browser rather than
+once per visit — it survives reloads, and it survives the proxy's own in-memory
+cache being wiped every time a free Render instance spins down. Cache hits are
+served before the budget check, so replaying a lesson costs nothing at all.
+Measured: one request on a first visit, zero for the same line after a reload.
+
+> **Bump `DB_VERSION` in `audioCache.ts` whenever the voice changes** — the
+> voice ID, the delivery settings, or the speed/pitch pair below. The cache key
+> can't see any of them (they live in the server's environment), so without a
+> bump children keep hearing lines in the old voice until they age out.
+
+**Her pitch is a pair of numbers that must move together.** ElevenLabs has no
+pitch control, so the proxy synthesises *slow* (`VOICE_SPEED`, 0.86) and the
+client plays back *fast* with pitch preservation switched off
+(`EXCITEMENT_RATE`, 1.18 in `src/audio/voice.ts`). The rates cancel to roughly
+normal speaking pace while the pitch lands about three semitones up — childlike
+and delighted. Change one without the other and she either gabbles or drawls.
 
 Both APIs need a secret key that can't live in client-side code, so this is
 the one deliberate exception to "no server" below: `server/` is a small,

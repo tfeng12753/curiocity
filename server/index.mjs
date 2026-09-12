@@ -32,13 +32,27 @@ const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? 'FGY2WhTYpPnrIDTdsKH5';
 const FALLBACK_VOICE_ID = 'cgSgspJ2msm6clMCkdW9';
 /** 0-1. Lower is more expressive and variable; higher is flatter and safer. */
-const VOICE_STABILITY = clamp01(process.env.ELEVENLABS_STABILITY, 0.35);
+const VOICE_STABILITY = clamp01(process.env.ELEVENLABS_STABILITY, 0.28);
 /** 0-1. Exaggerates the voice's own character. Above ~0.5 gets unstable. */
-const VOICE_STYLE = clamp01(process.env.ELEVENLABS_STYLE, 0.35);
+const VOICE_STYLE = clamp01(process.env.ELEVENLABS_STYLE, 0.5);
+/*
+  0.7-1.2, and deliberately below 1: the client plays narration back faster
+  than real time to raise the pitch (see EXCITEMENT_RATE in src/audio/voice.ts),
+  which would otherwise leave Curio gabbling. Synthesising slow and speeding up
+  on playback buys a childlike pitch at a normal speaking pace - ElevenLabs has
+  no pitch control of its own, so this pair is how we get one.
+
+  Change one of these two and you must change the other.
+*/
+const VOICE_SPEED = clampRange(process.env.ELEVENLABS_SPEED, 0.86, 0.7, 1.2);
 
 function clamp01(raw, fallback) {
+  return clampRange(raw, fallback, 0, 1);
+}
+
+function clampRange(raw, fallback, min, max) {
   const value = Number.parseFloat(raw);
-  return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback;
+  return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
 }
 
 const IFM_API_KEY = process.env.IFM_API_KEY;
@@ -89,6 +103,7 @@ async function requestSpeech(text, voiceId) {
         stability: VOICE_STABILITY,
         similarity_boost: 0.75,
         style: VOICE_STYLE,
+        speed: VOICE_SPEED,
         use_speaker_boost: true,
       },
     }),

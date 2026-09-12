@@ -1,9 +1,11 @@
 /*
-  Curio's narration, with two tiers so she is never silent:
+  Curio's narration, with three tiers so she is never silent:
 
-    1. ElevenLabs, via the server/ proxy, when an API key is configured -
+    1. This browser's own cache of lines it has already heard (audioCache.ts)
+       - instant, free, and survives reloads and server restarts.
+    2. ElevenLabs, via the server/ proxy, when an API key is configured -
        real character voice, with true amplitude for lip-sync.
-    2. The browser's built-in speech synthesis otherwise - no key, no
+    3. The browser's built-in speech synthesis otherwise - no key, no
        network, no cost. Lip-sync is approximated since there is no audio
        stream to analyse.
 
@@ -11,6 +13,7 @@
 */
 import { sfx } from './sound';
 import { speakable } from './speakable';
+import { readCachedClip, writeCachedClip } from './audioCache';
 
 const ENDPOINT = (import.meta.env.VITE_API_ENDPOINT ?? '/api').replace(/\/$/, '');
 const CACHE_LIMIT = 40;
@@ -25,6 +28,20 @@ const CACHE_LIMIT = 40;
 */
 const SYNTH_BUDGET = 40;
 let synthesised = 0;
+
+/*
+  Curio should sound childlike and thrilled, not like a narrator. ElevenLabs
+  has no pitch control at all, so the lift happens here: with pitch
+  preservation switched off, playbackRate shifts pitch the way speeding up a
+  tape does. 1.18 is around three semitones up - clearly a kid, still clearly
+  her.
+
+  Played straight that would also make her talk 18% faster, so the proxy
+  synthesises at VOICE_SPEED 0.86 to cancel it out: 0.86 x 1.18 is about 1.01,
+  a normal speaking pace at a much higher pitch. The two numbers are a pair -
+  change one and you must change the other, or she either gabbles or drawls.
+*/
+const EXCITEMENT_RATE = 1.18;
 
 /**
  * Falling back to browser speech is meant to be graceful, not invisible. It was
@@ -162,8 +179,10 @@ function speakWithBrowser(text: string, onAmplitude?: (level: number) => void, o
   if (voice) utterance.voice = voice;
   // A touch quicker and brighter than neutral - reads as upbeat rather than
   // instructional, without tipping into cartoonish.
-  utterance.rate = 1.02;
-  utterance.pitch = 1.25;
+  // SpeechSynthesis has a real pitch control (0-2), so no playback trick
+  // is needed here - just ask for the same bright, childlike register.
+  utterance.rate = 1.0;
+  utterance.pitch = 1.7;
 
   // There is no audio stream to measure here, so the mouth is driven by a
   // burbling oscillation for as long as she is talking - close enough to
@@ -202,6 +221,17 @@ async function fetchSpeechUrl(text: string, voiceId: string | undefined, control
   const key = `${voiceId ?? ''}::${text}`;
   const cached = blobCache.get(key);
   if (cached) return cached;
+
+  // Disk before network, and before the budget: a line this browser has heard
+  // before is free, so replaying a lesson must not spend a paid request or
+  // count against the visit's allowance.
+  const stored = await readCachedClip(key);
+  if (stored) {
+    const storedUrl = URL.createObjectURL(stored);
+    cacheBlobUrl(key, storedUrl);
+    return storedUrl;
+  }
+
   if (synthesised >= SYNTH_BUDGET) {
     warnFallback(`narration budget of ${SYNTH_BUDGET} new lines used up for this visit`);
     return null;
@@ -232,6 +262,10 @@ async function fetchSpeechUrl(text: string, voiceId: string | undefined, control
     return null;
   }
 
+  // Only written once the blob has been checked as real audio above, so a
+  // misconfigured proxy can never persist index.html as a lesson line.
+  void writeCachedClip(key, blob);
+
   const url = URL.createObjectURL(blob);
   cacheBlobUrl(key, url);
   return url;
@@ -240,6 +274,15 @@ async function fetchSpeechUrl(text: string, voiceId: string | undefined, control
 async function playUrl(url: string, onAmplitude?: (level: number) => void, onEnd?: () => void) {
   const audioEl = new Audio(url);
   currentAudio = audioEl;
+
+  // Browsers preserve pitch across rate changes by default, which would just
+  // make her talk faster in the same register. Turning that off is the whole
+  // trick. Safari spelled it differently for years, hence both.
+  type PitchyAudio = HTMLAudioElement & { preservesPitch?: boolean; webkitPreservesPitch?: boolean };
+  const pitchy = audioEl as PitchyAudio;
+  pitchy.preservesPitch = false;
+  pitchy.webkitPreservesPitch = false;
+  audioEl.playbackRate = EXCITEMENT_RATE;
   audioEl.onended = () => {
     onAmplitude?.(0);
     onEnd?.();
