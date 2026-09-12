@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Tiny proxy that keeps the ElevenLabs API key off the client and streams Poly's narration back to it.",
+  "description": "Tiny proxy that keeps the ElevenLabs API key off the client and streams Curio's narration back to it.",
   "scripts": {
     "start": "node index.mjs",
     "dev": "node --watch index.mjs"

@@ -9,7 +9,15 @@ import {
 } from 'react';
 import { CITIES, CITY_ORDER, TOTAL_LEVELS, type CityId } from '../data/cities';
 import type { VehicleId } from '../data/vehicles';
-import { COSMETICS, DEFAULT_COSMETICS, defaultEquipped, type CosmeticId, type CosmeticSlot } from '../data/cosmetics';
+import {
+  COSMETICS,
+  DEFAULT_COSMETICS,
+  defaultEquipped,
+  migrateCosmeticId,
+  migrateCosmeticSlot,
+  type CosmeticId,
+  type CosmeticSlot,
+} from '../data/cosmetics';
 
 export interface BadgeDefinition {
   id: string;
@@ -90,11 +98,47 @@ function freshState(): ProgressState {
   };
 }
 
+/**
+ * Wardrobe entries are rewritten rather than trusted: the catalogue grows
+ * between releases, so a save can hold ids that have been renamed (the old
+ * `color-*` skins) or removed entirely. Anything that no longer resolves is
+ * dropped, and every free item is re-granted so new free content shows up
+ * for students who already have a save.
+ */
+function sanitizeUnlocked(stored: unknown): CosmeticId[] {
+  const owned = new Set<CosmeticId>(DEFAULT_COSMETICS);
+  if (Array.isArray(stored)) {
+    for (const entry of stored) {
+      const id = migrateCosmeticId(entry);
+      if (id) owned.add(id);
+    }
+  }
+  return [...owned];
+}
+
+function sanitizeEquipped(
+  stored: unknown,
+  owned: CosmeticId[],
+): Partial<Record<CosmeticSlot, CosmeticId>> {
+  const equipped = defaultEquipped();
+  if (stored && typeof stored === 'object') {
+    for (const [slotKey, value] of Object.entries(stored as Record<string, unknown>)) {
+      const slot = migrateCosmeticSlot(slotKey);
+      const id = migrateCosmeticId(value);
+      // An item can only stay equipped while it is still owned - otherwise a
+      // stale save could wear something it never paid for.
+      if (slot && id && COSMETICS[id].slot === slot && owned.includes(id)) equipped[slot] = id;
+    }
+  }
+  return equipped;
+}
+
 function load(): ProgressState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return freshState();
     const parsed = JSON.parse(raw) as Partial<ProgressState>;
+    const unlockedCosmetics = sanitizeUnlocked(parsed.unlockedCosmetics);
     return {
       completed: Array.isArray(parsed.completed) ? parsed.completed : [],
       badges: Array.isArray(parsed.badges) ? parsed.badges : [],
@@ -102,14 +146,8 @@ function load(): ProgressState {
       // won't have them yet, so they default in rather than wiping anything.
       coins: typeof parsed.coins === 'number' ? parsed.coins : 0,
       unlockedVehicles: Array.isArray(parsed.unlockedVehicles) ? parsed.unlockedVehicles : [],
-      unlockedCosmetics:
-        Array.isArray(parsed.unlockedCosmetics) && parsed.unlockedCosmetics.length > 0
-          ? parsed.unlockedCosmetics
-          : DEFAULT_COSMETICS,
-      equippedCosmetics:
-        parsed.equippedCosmetics && typeof parsed.equippedCosmetics === 'object'
-          ? { ...defaultEquipped(), ...parsed.equippedCosmetics }
-          : defaultEquipped(),
+      unlockedCosmetics,
+      equippedCosmetics: sanitizeEquipped(parsed.equippedCosmetics, unlockedCosmetics),
     };
   } catch {
     return freshState();

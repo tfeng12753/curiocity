@@ -1,5 +1,5 @@
 /*
-  Poly's narration, with two tiers so she is never silent:
+  Curio's narration, with two tiers so she is never silent:
 
     1. ElevenLabs, via the server/ proxy, when an API key is configured -
        real character voice, with true amplitude for lip-sync.

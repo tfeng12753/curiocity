@@ -255,7 +255,7 @@ export function FractionTask({
             </span>
             {mistakeCount >= 2 && (
               <button className="btn btn--ghost btn--sm" onClick={requestHint} disabled={hintLoading}>
-                {hintLoading ? 'Thinking...' : '💡 Get a hint from Poly'}
+                {hintLoading ? 'Thinking...' : '💡 Get a hint from Curio'}
               </button>
             )}
           </>

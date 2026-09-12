@@ -1,0 +1,148 @@
+/*
+  Curio is idle-animated by default: she should look alive on a screen even
+  when nothing has happened yet, because she is usually the first thing a
+  student looks at.
+*/
+
+.curio__float {
+  animation: curio-float 4.6s ease-in-out infinite;
+  transform-origin: 64px 132px;
+}
+
+.curio__body {
+  animation: curio-breathe 4.2s ease-in-out infinite;
+  transform-origin: 64px 131px;
+}
+
+.curio__head {
+  animation: curio-tilt 5.4s ease-in-out infinite;
+  transform-origin: 64px 74px;
+}
+
+.curio__arm {
+  transform-origin: 44px 90px;
+  animation: curio-paddle 3.4s ease-in-out infinite;
+}
+
+.curio__arm--right {
+  transform-origin: 84px 90px;
+  animation-delay: -1.7s;
+}
+
+.curio__sparkle {
+  transform-origin: 100px 12.8px;
+  animation: curio-twinkle 2.6s ease-in-out infinite;
+}
+
+.curio__mouth-talk {
+  transition: ry 70ms linear;
+}
+
+/* Greeting: one arm keeps waving until she has been said hello to. */
+.curio--wave .curio__arm--right {
+  animation: curio-wave 0.9s ease-in-out infinite;
+  animation-delay: 0s;
+}
+
+.curio--cheer .curio__float {
+  animation: curio-hop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+
+.curio--cheer .curio__arm,
+.curio--happy .curio__arm {
+  animation-duration: 1.2s;
+}
+
+.curio--cheer .curio__sparkle {
+  animation-duration: 1s;
+}
+
+.curio--think .curio__head {
+  animation-duration: 3s;
+}
+
+@keyframes curio-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes curio-hop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-9px) scale(1.02, 0.98);
+  }
+}
+
+@keyframes curio-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02, 0.98);
+  }
+}
+
+@keyframes curio-tilt {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes curio-paddle {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes curio-wave {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(-42deg);
+  }
+}
+
+@keyframes curio-twinkle {
+  0%,
+  100% {
+    transform: scale(0.75) rotate(0deg);
+    opacity: 0.65;
+  }
+  50% {
+    transform: scale(1.15) rotate(18deg);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .curio__float,
+  .curio__body,
+  .curio__head,
+  .curio__arm,
+  .curio__sparkle {
+    animation: none;
+  }
+
+  .curio__mouth-talk {
+    transition: none;
+  }
+}

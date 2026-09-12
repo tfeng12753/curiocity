@@ -1,17 +1,17 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import { Avatar, type AvatarMood } from './Avatar';
+import { Curio, type CurioMood } from '../curio/Curio';
 import { useVoiceover } from '../../hooks/useVoiceover';
 
 interface DialogueBoxProps {
   text: string;
-  mood?: AvatarMood;
+  mood?: CurioMood;
   /** Short bold instruction shown under the speech, e.g. "MAKE 1/2". */
   instruction?: string;
   children?: ReactNode;
 }
 
-/** Types the guide's line out so children read it instead of skipping it. */
+/** Types Curio's line out so children read it instead of skipping it. */
 function useTypewriter(text: string, speed = 16) {
   const [shown, setShown] = useState(text);
 
@@ -41,11 +41,11 @@ export function DialogueBox({ text, mood = 'idle', instruction, children }: Dial
       transition={{ type: 'spring', stiffness: 200, damping: 22 }}
     >
       <div className="dialogue__avatar">
-        <Avatar mood={mood} size={128} talking={speaking} amplitude={amplitude} />
+        <Curio mood={mood} size={128} talking={speaking} amplitude={amplitude} />
       </div>
 
       <div className="dialogue__body">
-        <span className="dialogue__name">Poly</span>
+        <span className="dialogue__name">Curio</span>
         <p className="dialogue__text">
           {typed}
           <span className="dialogue__caret" aria-hidden="true" />

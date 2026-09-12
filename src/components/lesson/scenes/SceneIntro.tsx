@@ -9,7 +9,7 @@ import { Confetti } from '../Confetti';
 type Step = 'greet' | 'ask' | 'wrong' | 'correct';
 
 const LINES: Record<Step, string> = {
-  greet: "Hi, I'm Poly! Today we're going to learn about fractions.",
+  greet: "Hi there, I'm Curio - I am SO happy you came! Today we get to learn about fractions together.",
   ask: 'First, look at this pizza. Is it one whole, or is it broken into pieces?',
   wrong: 'Look again - nobody has cut it yet. Every single piece is still joined up!',
   correct: 'Exactly! When we have all of something, we have ONE WHOLE.',
@@ -53,7 +53,7 @@ export function SceneIntro({ onNext }: { onNext: () => void }) {
 
       <DialogueBox
         text={LINES[step]}
-        mood={step === 'correct' ? 'cheer' : step === 'wrong' ? 'think' : 'idle'}
+        mood={step === 'correct' ? 'cheer' : step === 'wrong' ? 'think' : step === 'greet' ? 'wave' : 'idle'}
         instruction={step === 'greet' ? undefined : step === 'correct' ? 'ONE WHOLE = ALL OF IT' : 'YOUR TURN'}
       >
         {step === 'greet' && (

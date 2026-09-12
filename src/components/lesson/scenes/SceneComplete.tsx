@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { sfx } from '../../../audio/sound';
 import { BADGES, useProgress } from '../../../state/progress';
 import { DwellTarget } from '../../../tracker/DwellTarget';
-import { Avatar } from '../Avatar';
+import { Curio } from '../../curio/Curio';
 import { Confetti } from '../Confetti';
 
 const LEARNED = [
@@ -54,7 +54,7 @@ export function SceneComplete({ onReturn, onKeepExploring }: SceneCompleteProps)
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.15, type: 'spring', stiffness: 200, damping: 16 }}
         >
-          <Avatar mood="cheer" size={150} />
+          <Curio mood="cheer" size={150} />
         </motion.div>
         <div>
           <span className="eyebrow" style={{ color: 'rgba(255,255,255,0.8)' }}>

@@ -316,39 +316,157 @@
 }
 
 .customize__preview {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 20px;
+  padding: 18px 20px 16px;
   margin-bottom: 18px;
   border-radius: var(--r-lg);
-  background: var(--panel-soft);
+  background: linear-gradient(180deg, #fbf9ff, var(--panel-soft));
+  border: 2px solid var(--violet-050);
 }
+
+.wardrobe__heading {
+  margin: 26px 0 12px;
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.wardrobe__heading:first-of-type {
+  margin-top: 8px;
+}
+
+.pill--ghost {
+  background: transparent;
+  border: 2px solid var(--violet-050);
+  color: var(--ink-faint);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
+/* ---------------------------------------------------------- colour swatches */
+
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+  gap: 10px;
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--r-md);
+  transition: transform 0.16s var(--ease-pop);
+}
+
+.swatch:hover {
+  transform: translateY(-2px);
+}
+
+.swatch i {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  box-shadow: inset 0 -3px 0 rgba(36, 26, 86, 0.16), var(--shadow-sm);
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+  font-style: normal;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(36, 26, 86, 0.5);
+  transition: outline-color 0.15s ease;
+}
+
+.swatch.is-equipped i {
+  outline-color: var(--mint-500);
+}
+
+.swatch span {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.swatch.is-equipped span {
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------- item cards */
 
 .cosmetic-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(102px, 1fr));
   gap: 10px;
 }
 
 .cosmetic-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   border: 2px solid var(--panel-border);
   border-radius: var(--r-md);
   background: var(--panel);
-  padding: 12px 10px;
+  padding: 10px 8px 12px;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, transform 0.16s var(--ease-pop);
+}
+
+.cosmetic-card__art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 62px;
+  margin-bottom: 4px;
+  border-radius: var(--r-sm);
+  background: var(--panel-soft);
+  overflow: hidden;
+}
+
+.cosmetic-card__art > svg {
+  max-height: 100%;
+  width: auto;
+}
+
+.cosmetic-card__empty {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--ink-faint);
 }
 
 .cosmetic-card:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+}
+
+.cosmetic-card.is-locked {
+  opacity: 0.62;
+  background: var(--panel-soft);
+}
+
+.cosmetic-card.is-locked .cosmetic-card__art > svg {
+  filter: grayscale(0.85);
 }
 
 .cosmetic-card:not(:disabled):hover {
   border-color: var(--violet-400);
+  transform: translateY(-2px);
 }
 
 .cosmetic-card.is-equipped {
@@ -356,16 +474,34 @@
   background: var(--success-soft);
 }
 
+.cosmetic-card.is-equipped .cosmetic-card__art {
+  background: #fff;
+}
+
+.cosmetic-card.is-confirming {
+  border-color: var(--sun-600);
+  background: var(--nudge-soft);
+}
+
 .cosmetic-card strong {
   display: block;
   font-family: var(--font-display);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  line-height: 1.2;
 }
 
 .cosmetic-card span {
   display: block;
-  margin-top: 4px;
-  font-size: 0.72rem;
-  font-weight: 700;
+  margin-top: 3px;
+  font-size: 0.7rem;
+  font-weight: 800;
   color: var(--ink-soft);
+}
+
+.cosmetic-card.is-equipped span {
+  color: var(--success);
+}
+
+.cosmetic-card.is-confirming span {
+  color: var(--nudge);
 }

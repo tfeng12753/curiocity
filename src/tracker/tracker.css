@@ -411,3 +411,21 @@
 .dwell-target.is-hot > * {
   transform: translateY(-2px);
 }
+
+/* Curio stands next to the gesture illustration on the welcome gate, so the
+   first thing a student meets is a character saying hello rather than a
+   permission prompt. */
+.camera-gate__hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 520px) {
+  .camera-gate__hero svg.curio {
+    width: 76px;
+    height: auto;
+  }
+}

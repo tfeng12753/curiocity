@@ -15,6 +15,17 @@ Math City's **Fraction Workshop** is the fully playable level. Physics City and
 Chemistry City are built out as real destinations on the world map so the shape
 of the product is obvious, with their levels marked *coming soon*.
 
+**Curio** is the student's learning buddy and the face of the product — she says
+hello on the welcome screen, guides every lesson, and is animated the whole time
+(she breathes, tilts, waves, blinks, and lip-syncs to her own narration).
+
+Students also have **their own character**, customised from a wardrobe they part
+earn and part just pick. Skin tone, eye colour, hair style and hair colour are
+always free — a student should be able to build a character that looks like them
+before earning a single coin — while shirts, hats, accessories and pets are
+bought with coins earned from finishing levels. Shirts and pets are the
+expensive end of the shop; an accessory or a hat is reachable early.
+
 ## Running it
 
 ```bash
@@ -86,7 +97,7 @@ configuration of it:
 - Cuts **snap** to sensible positions (halves, thirds, quarters; 45° steps) when
   the student is close, because children aim rather than measure. A cut that
   lands far off still produces unequal parts, which fails the check — the shape
-  gives a gentle wobble, Poly points out that the parts must match, and the cut
+  gives a gentle wobble, Curio points out that the parts must match, and the cut
   is taken back so they can try again. The answer is never shown for them.
 - On shapes needing one cut each way, the second cut is locked to the missing
   axis, so a roughly-centred aim always succeeds.
@@ -102,9 +113,13 @@ src/
     trackerStore.ts         MediaPipe + pointer fused into one cursor stream
     InteractiveSurface.tsx  hover/commit surface shared by every activity
     DwellTarget.tsx         any button, also activatable by holding the finger
+  data/cosmetics.ts         the wardrobe catalogue: slots, prices, colours
   components/
+    curio/Curio.tsx         Curio herself - one character, CSS-animated
+    player/                 the student's own character, wearing the wardrobe
     world/                  landing world + illustrated city islands
     city/                   city maps, destination nodes, landmark art
+    layout/                 top nav + the progress / achievements / wardrobe drawer
     level/                  level entrance
     lesson/                 fraction workshop, geometry, scenes
 scripts/
@@ -128,7 +143,7 @@ node scripts/camera-check.mjs  # verifies hand tracking initialises end to end
 
 ## Voice and AI hints (both optional)
 
-Poly can read her dialogue lines aloud with ElevenLabs, and can generate a
+Curio can read her dialogue lines aloud with ElevenLabs, and can generate a
 fresh, contextual hint (via IFM) when a student is stuck instead of the same
 static retry line every time. Both are entirely optional and independent —
 with no key configured, `/api/speak` or `/api/hint` returns a clear error,

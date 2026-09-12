@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { sfx } from '../audio/sound';
+import { Curio } from '../components/curio/Curio';
 import { tracker } from './trackerStore';
 import { useTrackerState } from './useTracker';
 import './tracker.css';
@@ -203,19 +204,23 @@ export function CameraGate({ onDone }: { onDone: () => void }) {
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 220, damping: 22 }}
       >
-        <div className="camera-gate__hand">
-          {phase === 'ready' ? <OpenPalmIllustration /> : <HandIllustration />}
+        <div className="camera-gate__hero">
+          <Curio mood={phase === 'ready' ? 'cheer' : 'wave'} size={104} />
+          <div className="camera-gate__hand">
+            {phase === 'ready' ? <OpenPalmIllustration /> : <HandIllustration />}
+          </div>
         </div>
 
         {phase === 'ask' && (
           <>
             <span className="eyebrow">Curio-City</span>
-            <h2>Ready to interact?</h2>
+            <h2>Hi! I'm Curio 👋</h2>
             <p>
-              This whole world can be played with your <strong>index finger</strong> - point to move
-              around, then open your whole hand, like a high five, to select things. It works
-              everywhere in Curio-City, not just in lessons. Turn on your camera, or use your mouse
-              instead - both work, and you'll only see this once.
+              I am so glad you're here - welcome to Curio-City! I'll be right beside you the whole
+              way. This whole world can be played with your <strong>index finger</strong> - point to
+              move around, then open your whole hand, like a high five, to select things. It works
+              everywhere here, not just in lessons. Turn on your camera, or use your mouse instead -
+              both work brilliantly, and you'll only see this once.
             </p>
             <div className="camera-gate__actions">
               <button className="btn btn--lg" onClick={startCamera}>
@@ -248,7 +253,7 @@ export function CameraGate({ onDone }: { onDone: () => void }) {
         {phase === 'ready' && (
           <>
             <span className="eyebrow">Camera ready</span>
-            <h2>Show your hand</h2>
+            <h2>Wave hello!</h2>
             <p>
               Hold your hand up to the camera. Point with your <strong>index finger</strong> to move
               around, then open your whole hand, like a high five, to select things.

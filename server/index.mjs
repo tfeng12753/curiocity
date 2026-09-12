@@ -1,7 +1,7 @@
 /*
   Tiny proxy whose only job is to keep secret API keys out of the browser.
   No framework, no dependencies: a couple of routes that forward to
-  ElevenLabs (narration) and IFM (Poly's hint generator), plus a health
+  ElevenLabs (narration) and IFM (Curio's hint generator), plus a health
   check for Render.
 */
 import { createServer } from 'node:http';
@@ -57,7 +57,7 @@ async function fetchSpeech(text, voiceId) {
   return Buffer.from(await response.arrayBuffer());
 }
 
-const HINT_SYSTEM_PROMPT = `You are Poly, a friendly robot guide in a fractions game for 5th-6th graders.
+const HINT_SYSTEM_PROMPT = `You are Curio, the student's warm, endlessly encouraging learning buddy in a fractions game for 5th-6th graders.
 A student is stuck on a task. Write ONE short, warm, encouraging hint (max 2 short sentences).
 Never give away the exact answer or the exact numbers/positions to use. Guide their thinking instead.
 Keep vocabulary simple and age-appropriate. No emoji, no markdown, plain text only.`;

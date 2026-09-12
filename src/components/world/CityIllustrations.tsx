@@ -5,6 +5,11 @@ import { Boat, IslandBase, Tree } from './IslandBase';
   island. They are intentionally illustration-only: no interaction logic lives
   here, so the same artwork can be reused at any size (landing world, map header,
   progress panel) without change.
+
+  The skylines follow the hand-drawn concept sketches: Math is a drafting table
+  (pencil, compass, ruler, a calculator tower with a face), Physics is a bench of
+  demonstrations (Newton's cradle, atom tower, telescope, gravity arrows), and
+  Chemistry is a lab bench (test tube rack, helix-wrapped block, a big flask).
 */
 
 const VIEW_BOX = '0 0 360 290';
@@ -37,76 +42,148 @@ function Windows({ x, y, rows, cols, gap = 14, size = 8, fill = '#fff5c9' }: {
   return <g>{cells}</g>;
 }
 
+/** The little "ta-da" strokes the sketches put over the tallest thing on the island. */
+function Sparkle({ x, y, scale = 1, tone = '#fff' }: { x: number; y: number; scale?: number; tone?: string }) {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${scale})`} stroke={tone} strokeWidth="3.4" strokeLinecap="round">
+      <line x1="0" y1="-14" x2="0" y2="-24" />
+      <line x1="-11" y1="-10" x2="-17" y2="-19" />
+      <line x1="11" y1="-10" x2="17" y2="-19" />
+    </g>
+  );
+}
+
+/** A ruler, used as both a skyline ridge and a ramp. */
+function Ruler({ x, y, width, rotate = 0, fill = '#ffd678', edge = '#f0a41d' }: {
+  x: number;
+  y: number;
+  width: number;
+  rotate?: number;
+  fill?: string;
+  edge?: string;
+}) {
+  const ticks = [];
+  for (let i = 1; i * 14 < width; i += 1) {
+    ticks.push(
+      <line
+        key={i}
+        x1={i * 14}
+        y1={0}
+        x2={i * 14}
+        y2={i % 2 === 0 ? 10 : 6}
+        stroke={edge}
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />,
+    );
+  }
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rotate})`}>
+      <rect width={width} height="18" rx="5" fill={fill} />
+      {ticks}
+    </g>
+  );
+}
+
 export function MathIsland({ animated = true }: { animated?: boolean }) {
   return (
     <svg viewBox={VIEW_BOX} className="island-svg" role="img" aria-label="Math City floating island">
       <IslandBase id="math" land="#7fe0a1" landShade="#3cb977" rock="#9a83f5" rockShade="#5f43cc">
-        {/* back towers */}
-        <rect x="206" y="88" width="52" height="76" rx="16" fill="#8b6bff" />
-        <rect x="206" y="88" width="52" height="18" rx="9" fill="#a98cff" />
-        <Windows x={216} y={116} rows={2} cols={2} />
+        <defs>
+          <clipPath id="math-plateau">
+            <ellipse cx="180" cy="170" rx="134" ry="40" />
+          </clipPath>
+        </defs>
 
-        <rect x="262" y="110" width="40" height="56" rx="14" fill="#ff9dc0" />
-        <path d="M262 110 L282 88 L302 110 Z" fill="#ff7bac" />
-        <Windows x={272} y={128} rows={2} cols={1} />
-
-        {/* pi tower */}
-        <rect x="150" y="52" width="54" height="114" rx="18" fill="#6d4bdc" />
-        <rect x="150" y="52" width="54" height="22" rx="11" fill="#8b6bff" />
-        <text
-          x="177"
-          y="118"
-          textAnchor="middle"
-          fontSize="44"
-          fontFamily="'Baloo 2', sans-serif"
-          fontWeight="800"
-          fill="#ffd678"
-        >
-          π
-        </text>
-        <circle cx="177" cy="44" r="7" fill="#ffc24a" />
-
-        {/* fraction pizza sign */}
-        <g transform="translate(92 96)">
-          <circle cx="0" cy="0" r="30" fill="#ffd678" stroke="#f0a41d" strokeWidth="4" />
-          <path d="M0 -30 A30 30 0 0 1 0 30 Z" fill="#ff9d5c" />
-          <line x1="0" y1="-30" x2="0" y2="30" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
-          <circle cx="-13" cy="-8" r="4" fill="#ff6f9c" />
-          <circle cx="-9" cy="10" r="4" fill="#ff6f9c" />
-          <rect x="-5" y="30" width="10" height="34" rx="5" fill="#c9bdf5" />
+        {/* the plateau is squared paper - the sketch's drafting grid */}
+        <g clipPath="url(#math-plateau)" stroke="#fff" strokeOpacity="0.38" strokeWidth="1.6">
+          {[-108, -72, -36, 0, 36, 72, 108].map((dx) => (
+            <line key={dx} x1={180 + dx} y1={128} x2={180 + dx * 1.35} y2={214} />
+          ))}
+          {[-26, -13, 0, 13, 26].map((dy) => (
+            <line key={dy} x1={44} y1={170 + dy} x2={316} y2={170 + dy} />
+          ))}
         </g>
 
-        {/* front blocks */}
-        <rect x="62" y="132" width="46" height="40" rx="14" fill="#5ad8f5" />
-        <Windows x={72} y={144} rows={1} cols={2} fill="#eafcff" />
+        {/* ruler ridge behind the skyline */}
+        <Ruler x={52} y={172} width={104} rotate={-31} />
 
-        <rect x="118" y="124" width="34" height="48" rx="12" fill="#ffc24a" />
-        <text x="135" y="158" textAnchor="middle" fontSize="24" fontWeight="800" fill="#8a5a00" fontFamily="'Baloo 2', sans-serif">
-          7
-        </text>
+        {/* pencil tower */}
+        <g>
+          <rect x="74" y="96" width="30" height="74" rx="6" fill="#ffc24a" />
+          <rect x="82" y="96" width="6" height="74" fill="#f0a41d" opacity="0.55" />
+          <path d="M74 96 L89 66 L104 96 Z" fill="#ffe2b5" />
+          <path d="M82 80 L89 66 L96 80 Z" fill="#3c2a9c" />
+          <rect x="72" y="150" width="34" height="9" rx="3" fill="#b3ecfa" />
+          <rect x="74" y="159" width="30" height="13" rx="4" fill="#ff92b6" />
+        </g>
 
-        <rect x="246" y="140" width="40" height="30" rx="12" fill="#5ad8f5" />
+        {/* drafting compass */}
+        <g>
+          <path d="M133 108 L119 166" stroke="#8b6bff" strokeWidth="7" strokeLinecap="round" fill="none" />
+          <path d="M139 108 L153 162" stroke="#7a5cf0" strokeWidth="7" strokeLinecap="round" fill="none" />
+          <path d="M115 160 L119 174 L123 162 Z" fill="#3c2a9c" />
+          <rect x="147" y="158" width="12" height="16" rx="3" fill="#ffc24a" transform="rotate(14 153 166)" />
+          <rect x="132" y="84" width="8" height="20" rx="4" fill="#5b3fe0" />
+          <circle cx="136" cy="106" r="9" fill="#b3ecfa" stroke="#5b3fe0" strokeWidth="3" />
+        </g>
 
-        {/* operator bubbles */}
+        {/* calculator tower, with the sketch's little face in the display */}
+        <g>
+          <rect x="168" y="54" width="62" height="118" rx="14" fill="#6d4bdc" />
+          <rect x="168" y="54" width="62" height="20" rx="10" fill="#8b6bff" />
+          <rect x="176" y="66" width="46" height="24" rx="8" fill="#d9f6ff" />
+          <rect x="186" y="72" width="6" height="12" rx="3" fill="#241a56" />
+          <rect x="206" y="72" width="6" height="12" rx="3" fill="#241a56" />
+          <Windows x={177} y={100} rows={3} cols={3} gap={17} size={11} fill="#c9bdf5" />
+          <path d="M199 54 L199 34" stroke="#5b3fe0" strokeWidth="3.4" strokeLinecap="round" />
+          <circle cx="199" cy="30" r="6" fill="#ffc24a" />
+        </g>
+        <g className={animated ? 'float-fast' : undefined}>
+          <Sparkle x={199} y={26} scale={0.8} tone="#ffd678" />
+        </g>
+
+        {/* operator block - the four-panel building from the sketch */}
+        <g>
+          <rect x="244" y="104" width="62" height="68" rx="12" fill="#ff9dc0" />
+          <rect x="250" y="110" width="24" height="26" rx="6" fill="#fff3f8" />
+          <rect x="276" y="110" width="24" height="26" rx="6" fill="#fff3f8" />
+          <rect x="250" y="140" width="24" height="26" rx="6" fill="#fff3f8" />
+          <rect x="276" y="140" width="24" height="26" rx="6" fill="#fff3f8" />
+          <g fill="#e0507e" fontFamily="'Baloo 2', sans-serif" fontWeight="800" fontSize="20" textAnchor="middle">
+            <text x="262" y="131">+</text>
+            <text x="288" y="131">÷</text>
+            <text x="262" y="161">−</text>
+            <text x="288" y="161">×</text>
+          </g>
+        </g>
+
+        {/* small block keeping the front edge busy */}
+        <rect x="222" y="142" width="26" height="30" rx="8" fill="#5ad8f5" />
+        <Windows x={229} y={150} rows={1} cols={1} fill="#eafcff" />
+
+        {/* floating operator bubbles */}
         <g className={animated ? 'float-slow' : undefined}>
-          <circle cx="64" cy="64" r="22" fill="#fff" opacity="0.95" />
-          <text x="64" y="74" textAnchor="middle" fontSize="26" fontWeight="800" fill="#7a5cf0" fontFamily="'Baloo 2', sans-serif">
-            +
+          <circle cx="62" cy="64" r="22" fill="#fff" opacity="0.95" />
+          <text x="62" y="74" textAnchor="middle" fontSize="24" fontWeight="800" fill="#7a5cf0" fontFamily="'Baloo 2', sans-serif">
+            %
           </text>
         </g>
         <g className={animated ? 'float-fast' : undefined}>
-          <circle cx="300" cy="58" r="18" fill="#fff" opacity="0.95" />
-          <text x="300" y="66" textAnchor="middle" fontSize="22" fontWeight="800" fill="#ff6f9c" fontFamily="'Baloo 2', sans-serif">
+          <circle cx="310" cy="62" r="18" fill="#fff" opacity="0.95" />
+          <text x="310" y="70" textAnchor="middle" fontSize="22" fontWeight="800" fill="#ff6f9c" fontFamily="'Baloo 2', sans-serif">
             ×
           </text>
         </g>
+        <g className={animated ? 'float-slow' : undefined}>
+          <circle cx="42" cy="126" r="14" fill="#fff" opacity="0.9" />
+          <text x="42" y="133" textAnchor="middle" fontSize="18" fontWeight="800" fill="#12a5d6" fontFamily="'Baloo 2', sans-serif">
+            =
+          </text>
+        </g>
 
-        {/* bridge + road */}
-        <path d="M74 178 C120 196 240 196 292 176" stroke="#fff" strokeOpacity="0.65" strokeWidth="7" fill="none" strokeLinecap="round" />
-
-        <Tree x={44} y={176} scale={0.9} />
-        <Tree x={318} y={172} scale={0.8} />
-        <Tree x={286} y={184} scale={0.7} tone="#37a05f" />
+        <Tree x={44} y={178} scale={0.85} />
+        <Tree x={324} y={176} scale={0.8} />
         <Boat x={44} y={252} sail="#ffd678" />
       </IslandBase>
     </svg>
@@ -117,112 +194,217 @@ export function PhysicsIsland({ animated = true }: { animated?: boolean }) {
   return (
     <svg viewBox={VIEW_BOX} className="island-svg" role="img" aria-label="Physics City floating island">
       <IslandBase id="physics" land="#7ce6b6" landShade="#33b391" rock="#59c7ea" rockShade="#2a86c9">
-        {/* observatory dome */}
-        <g transform="translate(178 96)">
-          <rect x="-56" y="24" width="112" height="46" rx="16" fill="#5a54d6" />
-          <path d="M-56 26 A56 50 0 0 1 56 26 Z" fill="#7a72f0" />
-          <path d="M-30 8 A32 30 0 0 1 30 8 Z" fill="#a9a2ff" opacity="0.55" />
-          <Windows x={-40} y={40} rows={1} cols={5} gap={18} size={10} fill="#d9f6ff" />
-          <rect x="-6" y="-52" width="12" height="26" rx="6" fill="#ffc24a" />
-          <circle cx="0" cy="-58" r="9" fill="#ffd678" />
-        </g>
-
-        {/* planet with ring */}
-        <g className={animated ? 'float-slow' : undefined} transform="translate(230 70)">
-          <circle cx="0" cy="0" r="26" fill="#ff9d5c" />
-          <circle cx="-8" cy="-8" r="7" fill="#ffc79c" opacity="0.7" />
-          <ellipse cx="0" cy="2" rx="42" ry="12" fill="none" stroke="#ffd678" strokeWidth="6" opacity="0.9" transform="rotate(-18)" />
-        </g>
-
-        {/* lightning tower */}
-        <rect x="74" y="82" width="40" height="86" rx="14" fill="#6d4bdc" />
-        <rect x="74" y="82" width="40" height="16" rx="8" fill="#8b6bff" />
-        <path d="M100 104 L86 130 L96 130 L88 152 L108 122 L97 122 Z" fill="#ffd678" />
-
-        {/* windmill */}
-        <g transform="translate(300 108)">
-          <rect x="-5" y="0" width="10" height="62" rx="5" fill="#eef3ff" />
-          <g className={animated ? 'spin-slow' : undefined} style={{ transformOrigin: '0px 0px' }}>
-            <rect x="-3" y="-34" width="6" height="34" rx="3" fill="#fff" />
-            <rect x="-3" y="-34" width="6" height="34" rx="3" fill="#fff" transform="rotate(120)" />
-            <rect x="-3" y="-34" width="6" height="34" rx="3" fill="#fff" transform="rotate(240)" />
+        {/* Newton's cradle hall */}
+        <g>
+          <rect x="76" y="98" width="80" height="74" rx="10" fill="#5a54d6" />
+          <rect x="76" y="98" width="80" height="12" rx="6" fill="#7a72f0" />
+          <g stroke="#d9f6ff" strokeWidth="2.6" strokeLinecap="round">
+            <line x1="96" y1="112" x2="96" y2="140" />
+            <line x1="116" y1="112" x2="116" y2="140" />
+            <line x1="136" y1="112" x2="136" y2="140" />
           </g>
-          <circle cx="0" cy="0" r="5" fill="#2fc2ec" />
+          <circle cx="96" cy="146" r="8" fill="#b3ecfa" />
+          <circle cx="116" cy="146" r="8" fill="#b3ecfa" />
+          <circle cx="136" cy="146" r="8" fill="#b3ecfa" />
+          <g stroke="#ffd678" strokeWidth="2.4" strokeLinecap="round" opacity="0.9">
+            <line x1="84" y1="142" x2="76" y2="138" />
+            <line x1="84" y1="150" x2="75" y2="150" />
+          </g>
+          <rect x="76" y="160" width="80" height="12" rx="4" fill="#4740b8" />
         </g>
 
-        {/* ramp + rolling ball */}
-        <path d="M92 170 L156 142 L156 170 Z" fill="#ffc24a" />
-        <circle cx="118" cy="158" r="9" fill="#ff6f9c" className={animated ? 'roll' : undefined} />
-
-        {/* pendulum */}
-        <g transform="translate(258 132)">
-          <rect x="-2" y="0" width="4" height="24" fill="#fff" opacity="0.8" />
-          <circle cx="0" cy="30" r="9" fill="#5ad8f5" stroke="#fff" strokeWidth="3" />
+        {/* lightbulb idea, glowing off the left edge */}
+        <g className={animated ? 'float-slow' : undefined}>
+          <g transform="translate(76 64)">
+          <g stroke="#ffd678" strokeWidth="3.2" strokeLinecap="round" opacity="0.9">
+            <line x1="0" y1="-26" x2="0" y2="-34" />
+            <line x1="-19" y1="-19" x2="-25" y2="-25" />
+            <line x1="19" y1="-19" x2="25" y2="-25" />
+            <line x1="-26" y1="0" x2="-34" y2="0" />
+            <line x1="26" y1="0" x2="34" y2="0" />
+          </g>
+          <circle cx="0" cy="0" r="18" fill="#ffe9a8" stroke="#ffc24a" strokeWidth="3" />
+          <path d="M-6 12 h12 v6 a6 6 0 0 1 -12 0 Z" fill="#c9bdf5" />
+          <path d="M-6 -2 L0 8 L6 -6" fill="none" stroke="#f0a41d" strokeWidth="3" strokeLinecap="round" />
+          </g>
         </g>
 
-        <path d="M70 180 C130 198 240 196 296 176" stroke="#fff" strokeOpacity="0.6" strokeWidth="7" fill="none" strokeLinecap="round" />
-        <Tree x={52} y={176} scale={0.85} tone="#2aa87f" />
-        <Tree x={330} y={176} scale={0.7} tone="#2aa87f" />
+        {/* apple, still falling toward the ramp */}
+        <g transform="translate(58 156)">
+          <circle cx="0" cy="0" r="11" fill="#ff6f9c" />
+          <circle cx="-4" cy="-4" r="3.4" fill="#fff" opacity="0.45" />
+          <path d="M0 -10 C2 -16 8 -18 10 -16 C8 -11 4 -9 0 -10 Z" fill="#3fd68f" />
+        </g>
+
+        {/* atom tower */}
+        <g>
+          <rect x="170" y="62" width="58" height="110" rx="14" fill="#6d4bdc" />
+          <rect x="170" y="62" width="58" height="18" rx="9" fill="#8b6bff" />
+          <Windows x={180} y={90} rows={3} cols={3} gap={16} size={10} fill="#e6dcff" />
+        </g>
+        <g
+          className={animated ? 'spin-slow' : undefined}
+          style={{ transformOrigin: '199px 40px' }}
+        >
+          <ellipse cx="199" cy="40" rx="28" ry="11" fill="none" stroke="#fff" strokeWidth="4" opacity="0.95" />
+          <ellipse cx="199" cy="40" rx="28" ry="11" fill="none" stroke="#fff" strokeWidth="4" opacity="0.95" transform="rotate(60 199 40)" />
+          <ellipse cx="199" cy="40" rx="28" ry="11" fill="none" stroke="#fff" strokeWidth="4" opacity="0.95" transform="rotate(120 199 40)" />
+          <circle cx="227" cy="40" r="5" fill="#ffd678" />
+        </g>
+        <circle cx="199" cy="40" r="10" fill="#ff6f9c" stroke="#fff" strokeWidth="3" />
+
+        {/* telescope on its ramp */}
+        <g>
+          <path d="M238 172 L302 138 L302 172 Z" fill="#ffc24a" />
+          <path d="M238 172 L302 138 L302 146 L252 172 Z" fill="#ffd678" />
+          <g transform="translate(286 126) rotate(-34)">
+            <rect x="-26" y="-9" width="52" height="18" rx="9" fill="#eef3ff" />
+            <rect x="20" y="-12" width="16" height="24" rx="7" fill="#5ad8f5" />
+            <rect x="-30" y="-7" width="10" height="14" rx="5" fill="#2fc2ec" />
+          </g>
+          <Sparkle x={318} y={112} scale={0.7} tone="#ffd678" />
+          <rect x="272" y="150" width="24" height="22" rx="6" fill="#2fc2ec" />
+        </g>
+
+        {/* energy arcing off the right edge */}
+        <g className={animated ? 'float-fast' : undefined}>
+          <path d="M330 96 L318 114 L328 114 L320 132 L340 106 L329 106 Z" fill="#ffd678" stroke="#f0a41d" strokeWidth="2" strokeLinejoin="round" />
+        </g>
+
+        {/* gravity: the sketch stood the whole island on down arrows */}
+        <g stroke="#ffffff" strokeOpacity="0.6" strokeWidth="5" strokeLinecap="round" fill="none">
+          <path d="M46 206 L46 236" />
+          <path d="M37 227 L46 240 L55 227" />
+          <path d="M314 202 L314 232" />
+          <path d="M305 223 L314 236 L323 223" />
+        </g>
+
+        <path d="M70 182 C130 200 240 198 296 178" stroke="#fff" strokeOpacity="0.55" strokeWidth="7" fill="none" strokeLinecap="round" />
+        <Tree x={166} y={180} scale={0.7} tone="#2aa87f" />
+        <Tree x={318} y={180} scale={0.62} tone="#2aa87f" />
         <Boat x={306} y={250} sail="#b3ecfa" />
       </IslandBase>
     </svg>
   );
 }
 
+/** One of the sketch's loose doodle curls. */
+function Curl({ x, y, scale = 1, tone = '#ffffff' }: { x: number; y: number; scale?: number; tone?: string }) {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${scale})`}>
+      <path
+        d="M0 -10 C9 -10 13 -2 8 4 C3 10 -6 8 -8 1 C-11 -9 -2 -18 8 -16"
+        fill="none"
+        stroke={tone}
+        strokeWidth="3.4"
+        strokeLinecap="round"
+        opacity="0.9"
+      />
+    </g>
+  );
+}
+
 export function ChemistryIsland({ animated = true }: { animated?: boolean }) {
+  /* the striped band that spirals around the left block */
+  const helixRungs = Array.from({ length: 9 }, (_, i) => {
+    const t = (i / 8) * Math.PI - Math.PI / 2;
+    return { x: Math.cos(t) * 42, y: Math.sin(t) * 15 };
+  });
+
   return (
     <svg viewBox={VIEW_BOX} className="island-svg" role="img" aria-label="Chemistry City floating island">
       <IslandBase id="chem" land="#8ae4a8" landShade="#3cb977" rock="#6fd2e8" rockShade="#2e9ecb">
-        {/* flask tower */}
-        <g transform="translate(178 92)">
-          <rect x="-30" y="-10" width="60" height="82" rx="22" fill="#ff9d5c" />
-          <path d="M-30 34 H30 V58 A30 22 0 0 1 -30 58 Z" fill="#ffd678" />
-          <rect x="-12" y="-30" width="24" height="26" rx="10" fill="#ffb37a" />
-          <circle cx="0" cy="-38" r="10" fill="#fff" opacity="0.9" />
-          <Windows x={-18} y={0} rows={1} cols={3} gap={16} size={9} fill="#fff3d6" />
+        {/* helix band, back half */}
+        <g transform="translate(106 136) rotate(-14)">
+          <ellipse rx="42" ry="15" fill="none" stroke="#ffd678" strokeWidth="11" />
         </g>
 
-        {/* beaker buildings */}
-        <g transform="translate(96 112)">
-          <rect x="-26" y="-6" width="52" height="66" rx="18" fill="#8b6bff" />
-          <path d="M-26 24 H26 V46 A26 18 0 0 1 -26 46 Z" fill="#5ad8f5" opacity="0.9" />
-          <rect x="-10" y="-24" width="20" height="20" rx="8" fill="#a98cff" />
-          <circle cx="-8" cy="34" r="4" fill="#fff" opacity="0.8" />
-          <circle cx="8" cy="40" r="3" fill="#fff" opacity="0.8" />
+        {/* tilted window block */}
+        <g transform="rotate(-7 106 132)">
+          <rect x="74" y="92" width="64" height="80" rx="10" fill="#8b6bff" />
+          <rect x="74" y="92" width="64" height="14" rx="7" fill="#a98cff" />
+          <Windows x={84} y={114} rows={2} cols={2} gap={22} size={13} fill="#f3eeff" />
         </g>
 
-        <g transform="translate(268 118)">
-          <rect x="-24" y="-4" width="48" height="60" rx="16" fill="#ff6f9c" />
-          <rect x="-24" y="-4" width="48" height="14" rx="7" fill="#ff92b6" />
-          <Windows x={-14} y={16} rows={2} cols={2} gap={16} fill="#fff0f6" />
+        {/* helix band, front half - drawn after the block so it wraps around it */}
+        <g transform="translate(106 136) rotate(-14)">
+          <path d="M-42 0 A42 15 0 0 0 42 0" fill="none" stroke="#ffc24a" strokeWidth="11" />
+          {helixRungs.map((rung) => (
+            <line
+              key={rung.x}
+              x1={rung.x * 0.86}
+              y1={rung.y * 0.86 + 3}
+              x2={rung.x * 1.14}
+              y2={rung.y * 1.14 + 3}
+              stroke="#fff"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              opacity="0.8"
+            />
+          ))}
         </g>
 
-        {/* smoke stacks */}
-        <g opacity="0.85" className={animated ? 'float-slow' : undefined}>
-          <circle cx="248" cy="86" r="9" fill="#fff" />
-          <circle cx="262" cy="70" r="7" fill="#fff" opacity="0.8" />
-          <circle cx="276" cy="58" r="5" fill="#fff" opacity="0.6" />
+        {/* test tube rack on its stand */}
+        <g>
+          <rect x="162" y="62" width="9" height="110" rx="4" fill="#eef3ff" />
+          <rect x="156" y="84" width="21" height="9" rx="4" fill="#c9bdf5" />
+          <rect x="182" y="66" width="22" height="62" rx="11" fill="#d9f6ff" stroke="#a9dcee" strokeWidth="2" />
+          <path d="M182 104 v13 a11 11 0 0 0 22 0 v-13 Z" fill="#ff6f9c" />
+          <rect x="216" y="76" width="20" height="54" rx="10" fill="#d9f6ff" stroke="#a9dcee" strokeWidth="2" />
+          <path d="M216 108 v12 a10 10 0 0 0 20 0 v-12 Z" fill="#3fd68f" />
+          {/* the rack shelf sits in front, so it visibly carries the tubes */}
+          <rect x="166" y="86" width="84" height="11" rx="5" fill="#eef3ff" />
+          <rect x="166" y="86" width="84" height="4" rx="2" fill="#fff" />
+          <rect x="180" y="62" width="26" height="8" rx="4" fill="#b3ecfa" />
+          <rect x="214" y="72" width="24" height="8" rx="4" fill="#b3ecfa" />
+          <g className={animated ? 'float-fast' : undefined}>
+            <Sparkle x={193} y={56} scale={0.85} tone="#ffd678" />
+          </g>
         </g>
 
-        {/* molecule */}
-        <g className={animated ? 'float-fast' : undefined} transform="translate(84 58)">
-          <line x1="0" y1="0" x2="26" y2="-14" stroke="#7a5cf0" strokeWidth="5" strokeLinecap="round" />
-          <line x1="0" y1="0" x2="-22" y2="-16" stroke="#7a5cf0" strokeWidth="5" strokeLinecap="round" />
-          <circle cx="0" cy="0" r="12" fill="#7a5cf0" />
-          <circle cx="26" cy="-14" r="8" fill="#5ad8f5" />
-          <circle cx="-22" cy="-16" r="8" fill="#ffc24a" />
+        {/* second block */}
+        <g>
+          <rect x="196" y="112" width="60" height="60" rx="10" fill="#ff9dc0" />
+          <rect x="196" y="112" width="60" height="12" rx="6" fill="#ffb8d2" />
+          <Windows x={206} y={132} rows={2} cols={3} gap={16} size={10} fill="#fff3f8" />
         </g>
 
-        {/* greenhouse dome */}
-        <g transform="translate(214 152)">
-          <path d="M-28 14 A28 26 0 0 1 28 14 Z" fill="#bff2d9" opacity="0.9" />
-          <path d="M0 -12 V14 M-16 4 V14 M16 4 V14" stroke="#3fd68f" strokeWidth="3" />
-          <rect x="-28" y="12" width="56" height="8" rx="4" fill="#fff" opacity="0.8" />
+        {/* the big flask */}
+        <g>
+          <path
+            d="M274 116 h22 v11 c0 5 24 19 24 36 c0 10 -9 16 -18 16 h-34 c-9 0 -18 -6 -18 -16 c0 -17 24 -31 24 -36 Z"
+            fill="#ffc24a"
+          />
+          <path
+            d="M264 149 c-6 6 -10 11 -10 14 c0 10 9 16 18 16 h34 c9 0 18 -6 18 -16 c0 -3 -4 -8 -10 -14 Z"
+            fill="#ff9d5c"
+          />
+          <rect x="270" y="109" width="30" height="11" rx="4" fill="#eef3ff" />
+          <circle cx="272" cy="165" r="3.6" fill="#fff" opacity="0.75" />
+          <circle cx="288" cy="171" r="2.6" fill="#fff" opacity="0.6" />
+          <Sparkle x={285} y={100} scale={0.72} tone="#ffd678" />
         </g>
 
-        <path d="M70 178 C130 198 240 196 300 174" stroke="#fff" strokeOpacity="0.6" strokeWidth="7" fill="none" strokeLinecap="round" />
-        <Tree x={48} y={174} scale={0.85} />
-        <Tree x={330} y={170} scale={0.75} />
+        {/* loose doodle curls from the sketch */}
+        <g className={animated ? 'float-slow' : undefined}>
+          <Curl x={66} y={66} scale={1.1} />
+        </g>
+        <g className={animated ? 'float-fast' : undefined}>
+          <Curl x={236} y={52} scale={0.9} />
+        </g>
+        <Curl x={40} y={122} scale={0.8} />
+
+        {/* bubbles */}
+        <g fill="#fff" opacity="0.55">
+          <circle cx="150" cy="70" r="4" />
+          <circle cx="136" cy="52" r="3" />
+          <circle cx="326" cy="86" r="4.5" />
+          <circle cx="312" cy="66" r="3" />
+        </g>
+
+        <path d="M70 182 C130 200 240 198 300 178" stroke="#fff" strokeOpacity="0.55" strokeWidth="7" fill="none" strokeLinecap="round" />
+        <Tree x={48} y={178} scale={0.85} />
+        <Tree x={334} y={172} scale={0.7} />
         <Boat x={60} y={250} sail="#ffd678" />
       </IslandBase>
     </svg>

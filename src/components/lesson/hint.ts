@@ -1,5 +1,5 @@
 /*
-  Poly's AI-generated hints - a short, encouraging nudge from IFM when a
+  Curio's AI-generated hints - a short, encouraging nudge from IFM when a
   student is stuck, without giving the answer away. Optional: if the
   backend has no IFM_API_KEY, or the request fails for any reason, this
   quietly returns null and the lesson falls back to its static retry line.
