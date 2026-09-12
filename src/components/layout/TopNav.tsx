@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { sfx } from '../../audio/sound';
 import { useProgress } from '../../state/progress';
+import { Logo } from './Logo';
 import './layout.css';
 
 export type NavPanel = 'progress' | 'achievements' | null;
@@ -26,14 +27,7 @@ export function TopNav({ onHome, openPanel, onOpenPanel, compact = false }: TopN
   return (
     <header className={`topnav ${compact ? 'topnav--compact' : ''}`}>
       <button className="topnav__logo" onClick={onHome}>
-        <span className="topnav__mark" aria-hidden="true">
-          <svg viewBox="0 0 32 32" width="22" height="22">
-            <circle cx="16" cy="16" r="14" fill="var(--sun-500)" />
-            <path d="M16 2 A14 14 0 0 1 16 30 Z" fill="var(--violet-600)" />
-            <circle cx="16" cy="16" r="4" fill="#fff" />
-          </svg>
-        </span>
-        LEARNVERSE
+        <Logo orientation="horizontal" size={26} />
       </button>
 
       <nav className="topnav__links" aria-label="Main">

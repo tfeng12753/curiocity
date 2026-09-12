@@ -244,30 +244,25 @@ export const tracker = {
     if (state.status === 'ready' && state.mode === 'hand') return true;
     patchState({ status: 'starting', error: null });
 
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error('This browser has no camera access.');
-      }
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-        audio: false,
-      });
-      const el = ensureVideo();
-      el.srcObject = stream;
-      await el.play();
+    // getUserMedia can hang instead of rejecting (an OS-level block that never
+    // surfaces a prompt, or a blocked model download) - a timeout keeps
+    // "Warming up the camera" from being a dead end with no way out.
+    const START_TIMEOUT_MS = 15_000;
+    let timedOut = false;
+    const timeout = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        timedOut = true;
+        reject(new Error('Camera took too long to start. Check your camera permissions and try again.'));
+      }, START_TIMEOUT_MS);
+    });
 
-      landmarker = await createLandmarker();
-      lastVideoTime = -1;
-      handMissingFrames = 0;
-      filterX.reset();
-      filterY.reset();
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(loop);
-      patchState({ mode: 'hand', status: 'ready', error: null });
+    try {
+      await Promise.race([this._connectCamera(), timeout]);
       return true;
     } catch (error) {
-      const message =
-        error instanceof DOMException && error.name === 'NotAllowedError'
+      const message = timedOut
+        ? (error as Error).message
+        : error instanceof DOMException && error.name === 'NotAllowedError'
           ? 'Camera permission was blocked.'
           : error instanceof Error
             ? error.message
@@ -276,6 +271,28 @@ export const tracker = {
       patchState({ mode: 'pointer', status: 'error', error: message });
       return false;
     }
+  },
+
+  async _connectCamera() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error('This browser has no camera access.');
+    }
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+      audio: false,
+    });
+    const el = ensureVideo();
+    el.srcObject = stream;
+    await el.play();
+
+    landmarker = await createLandmarker();
+    lastVideoTime = -1;
+    handMissingFrames = 0;
+    filterX.reset();
+    filterY.reset();
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(loop);
+    patchState({ mode: 'hand', status: 'ready', error: null });
   },
 
   stopCamera() {

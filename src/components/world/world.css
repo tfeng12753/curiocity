@@ -232,6 +232,12 @@
   z-index: 7;
 }
 
+.city-card--below {
+  bottom: auto;
+  top: 100%;
+  transform: translate(-50%, 10px);
+}
+
 .city-card h3 {
   font-size: 1.3rem;
   color: var(--city-deep);

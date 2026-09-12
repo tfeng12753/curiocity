@@ -50,6 +50,41 @@
   background: var(--violet-050);
 }
 
+/* ------------------------------------------------------------------- logo */
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo--stacked {
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+
+.logo__word {
+  display: inline-flex;
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.logo__word--stacked {
+  flex-direction: column;
+  line-height: 1.05;
+  letter-spacing: 0.08em;
+}
+
+.logo__curio {
+  color: var(--violet-600);
+}
+
+.logo__city {
+  color: var(--cyan-600);
+}
+
 .topnav__links {
   display: flex;
   gap: 6px;

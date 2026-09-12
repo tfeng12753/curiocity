@@ -1,17 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#7a5cf0" />
-      <stop offset="1" stop-color="#3c2a9c" />
-    </linearGradient>
-    <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#5ad8f5" />
-      <stop offset="1" stop-color="#12a5d6" />
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="16" fill="url(#sky)" />
-  <circle cx="45" cy="18" r="7" fill="#ffc24a" />
-  <ellipse cx="32" cy="36" rx="19" ry="7" fill="url(#grass)" />
-  <path d="M13 36 C16 46 23 53 32 56 C41 53 48 46 51 36 C44 41 20 41 13 36 Z" fill="#3c2a9c" />
-  <path d="M28 24 h8 v4 h-8 z M24 30 h16 v3 h-16 z" fill="#fff" opacity="0.92" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <g fill="#ffc24a">
+    <path d="M20 20 l2.6 6.4 6.4 2.6 -6.4 2.6 -2.6 6.4 -2.6 -6.4 -6.4 -2.6 6.4 -2.6 Z" opacity="0.9" />
+    <path d="M82 30 l1.8 4.4 4.4 1.8 -4.4 1.8 -1.8 4.4 -1.8 -4.4 -4.4 -1.8 4.4 -1.8 Z" opacity="0.75" />
+  </g>
+  <path d="M52 28 C58 20 60 14 58 8" fill="none" stroke="#5b3fe0" stroke-width="4" stroke-linecap="round" />
+  <path d="M58 3 l2 4.6 4.6 2 -4.6 2 -2 4.6 -2 -4.6 -4.6 -2 4.6 -2 Z" fill="#ffc24a" stroke="#f0a41d" stroke-width="0.6" />
+  <rect x="14" y="26" width="72" height="62" rx="34" fill="#7a5cf0" stroke="#5b3fe0" stroke-width="3" />
+  <circle cx="27" cy="68" r="5.5" fill="#ff92b6" opacity="0.65" />
+  <circle cx="73" cy="68" r="5.5" fill="#ff92b6" opacity="0.65" />
+  <ellipse cx="36" cy="56" rx="9.5" ry="11.5" fill="#fdfbff" />
+  <ellipse cx="64" cy="56" rx="9.5" ry="11.5" fill="#fdfbff" />
+  <circle cx="38" cy="59" r="5.2" fill="#241a56" />
+  <circle cx="66" cy="59" r="5.2" fill="#241a56" />
+  <circle cx="40" cy="55.5" r="1.7" fill="#fff" />
+  <circle cx="68" cy="55.5" r="1.7" fill="#fff" />
+  <path d="M42 74 q8 7 16 0" fill="none" stroke="#241a56" stroke-width="3" stroke-linecap="round" />
 </svg>

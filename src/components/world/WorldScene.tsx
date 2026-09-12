@@ -14,18 +14,21 @@ interface Placement {
   top: string;
   width: string;
   delay: number;
+  /** Opens the hover card downward instead of up - for islands near the top
+   *  of the stage, where an upward card would collide with the hero title. */
+  cardBelow?: boolean;
 }
 
 /** Island placement on the world stage, as percentages of the viewport. */
 const WIDE_LAYOUT: Record<CityId, Placement> = {
-  chemistry: { left: '36%', top: '24%', width: '26%', delay: 1.2 },
+  chemistry: { left: '36%', top: '24%', width: '26%', delay: 1.2, cardBelow: true },
   math: { left: '7%', top: '41%', width: '31%', delay: 0 },
   physics: { left: '62%', top: '43%', width: '31%', delay: 0.6 },
 };
 
 /** Portrait and narrow screens stack the world into a vertical trail instead. */
 const NARROW_LAYOUT: Record<CityId, Placement> = {
-  chemistry: { left: '26%', top: '17%', width: '48%', delay: 1.2 },
+  chemistry: { left: '26%', top: '17%', width: '48%', delay: 1.2, cardBelow: true },
   math: { left: '4%', top: '38%', width: '54%', delay: 0 },
   physics: { left: '42%', top: '60%', width: '54%', delay: 0.6 },
 };
@@ -90,7 +93,7 @@ export function WorldScene({ onEnterCity }: WorldSceneProps) {
       <div className="world__sea" />
 
       <div className="world__hero">
-        <span className="eyebrow">Learnverse</span>
+        <span className="eyebrow">Curio City</span>
         <h1>Enter your learning world</h1>
         <p>Explore new worlds. Discover new ideas. Learn by doing.</p>
       </div>
@@ -151,10 +154,10 @@ export function WorldScene({ onEnterCity }: WorldSceneProps) {
                 <AnimatePresence>
                   {hovered === cityId && (
                     <motion.div
-                      className="city-card"
-                      initial={{ opacity: 0, y: 10, scale: 0.94 }}
+                      className={`city-card ${place.cardBelow ? 'city-card--below' : ''}`}
+                      initial={{ opacity: 0, y: place.cardBelow ? -10 : 10, scale: 0.94 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                      exit={{ opacity: 0, y: place.cardBelow ? -8 : 8, scale: 0.96 }}
                       transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                     >
                       <h3>{city.name}</h3>
