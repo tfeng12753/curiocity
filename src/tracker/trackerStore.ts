@@ -1,4 +1,4 @@
-import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
+import type { HandLandmarker } from '@mediapipe/tasks-vision';
 import { makeOneEuroFilter } from './oneEuro';
 
 /*
@@ -118,6 +118,10 @@ function ensureVideo(): HTMLVideoElement {
 }
 
 async function createLandmarker(): Promise<HandLandmarker> {
+  // Loaded on demand: the tracking runtime is large, and a student browsing the
+  // world map has not asked for a camera yet.
+  const { FilesetResolver, HandLandmarker } = await import('@mediapipe/tasks-vision');
+
   let fileset;
   try {
     fileset = await FilesetResolver.forVisionTasks(WASM_LOCAL);

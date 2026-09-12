@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { CITIES, CITY_ORDER, type CityId } from '../../data/cities';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useProgress } from '../../state/progress';
 import { sfx } from '../../audio/sound';
 import { DwellTarget } from '../../tracker/DwellTarget';
@@ -8,12 +9,29 @@ import { CITY_ILLUSTRATIONS } from './CityIllustrations';
 import { Cloud } from './IslandBase';
 import './world.css';
 
+interface Placement {
+  left: string;
+  top: string;
+  width: string;
+  delay: number;
+}
+
 /** Island placement on the world stage, as percentages of the viewport. */
-const LAYOUT: Record<CityId, { left: string; top: string; width: string; delay: number }> = {
+const WIDE_LAYOUT: Record<CityId, Placement> = {
   chemistry: { left: '36%', top: '24%', width: '26%', delay: 1.2 },
   math: { left: '7%', top: '41%', width: '31%', delay: 0 },
   physics: { left: '62%', top: '43%', width: '31%', delay: 0.6 },
 };
+
+/** Portrait and narrow screens stack the world into a vertical trail instead. */
+const NARROW_LAYOUT: Record<CityId, Placement> = {
+  chemistry: { left: '26%', top: '17%', width: '48%', delay: 1.2 },
+  math: { left: '4%', top: '38%', width: '54%', delay: 0 },
+  physics: { left: '42%', top: '60%', width: '54%', delay: 0.6 },
+};
+
+const WIDE_ROUTES = ['M25 64 C32 56 40 48 47 46', 'M52 47 C62 50 70 58 76 65', 'M24 70 C40 84 62 84 78 71'];
+const NARROW_ROUTES = ['M40 36 C36 42 30 46 24 52', 'M34 60 C44 64 54 68 62 72'];
 
 function CloudLayer() {
   const clouds = [
@@ -50,6 +68,9 @@ interface WorldSceneProps {
 export function WorldScene({ onEnterCity }: WorldSceneProps) {
   const [hovered, setHovered] = useState<CityId | null>(null);
   const { cityProgress } = useProgress();
+  const narrow = useMediaQuery('(max-width: 900px)');
+  const layout = narrow ? NARROW_LAYOUT : WIDE_LAYOUT;
+  const routes = narrow ? NARROW_ROUTES : WIDE_ROUTES;
 
   const enter = (cityId: CityId) => {
     sfx.play('travel');
@@ -77,15 +98,15 @@ export function WorldScene({ onEnterCity }: WorldSceneProps) {
       <div className="world__stage">
         <svg className="world__routes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           {/* routes are drawn between the island plateaus, behind the islands */}
-          <path d="M25 64 C32 56 40 48 47 46" />
-          <path d="M52 47 C62 50 70 58 76 65" />
-          <path d="M24 70 C40 84 62 84 78 71" />
+          {routes.map((route) => (
+            <path key={route} d={route} />
+          ))}
         </svg>
 
         {CITY_ORDER.map((cityId) => {
           const city = CITIES[cityId];
           const Illustration = CITY_ILLUSTRATIONS[cityId];
-          const place = LAYOUT[cityId];
+          const place = layout[cityId];
           const { done, total } = cityProgress(cityId);
 
           return (

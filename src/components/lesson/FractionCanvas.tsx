@@ -94,7 +94,6 @@ export function FractionCanvas({
         setHotRegion(regionAt(regions, kind, point)?.id ?? null);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [mode, kind, allow, atMaxCuts, regions],
   );
 
@@ -111,7 +110,6 @@ export function FractionCanvas({
       }
       return null;
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [mode, kind, allow, cuts, regions, atMaxCuts],
   );
 
@@ -130,7 +128,6 @@ export function FractionCanvas({
         if (region) onToggleRegion?.(region);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [mode, kind, allow, cuts, regions, atMaxCuts, onCut, onToggleRegion],
   );
 

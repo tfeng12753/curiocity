@@ -376,23 +376,51 @@
   box-shadow: var(--shadow-md);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1240px) {
   .map-node {
-    width: 140px;
+    width: 172px;
   }
   .map-node__art {
-    width: 112px;
-    height: 112px;
-  }
-  .map-node__islet {
-    width: 104px;
-    height: 72px;
+    width: 150px;
+    height: 160px;
   }
   .map-node__art .landmark {
-    width: 92px;
-    height: 106px;
+    width: 146px;
+    height: 168px;
+  }
+  .map-node.is-playable .map-node__art::after {
+    width: 124px;
+    height: 70px;
   }
   .city__hint {
     display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .city__stage {
+    inset: 168px 24px 84px;
+  }
+  .map-node {
+    width: 130px;
+  }
+  .map-node__pill {
+    font-size: 0.74rem;
+    padding: 5px 12px 5px 5px;
+  }
+  .map-node__art {
+    width: 112px;
+    height: 122px;
+  }
+  .map-node__art .landmark {
+    width: 110px;
+    height: 126px;
+  }
+  .map-node.is-playable .map-node__art::after {
+    width: 94px;
+    height: 54px;
+  }
+  .map-node__badge {
+    font-size: 0.6rem;
   }
 }
