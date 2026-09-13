@@ -201,6 +201,16 @@ Never ask for, repeat, or store anything personal about them. If something sound
         .filter(Boolean)
         .join('\n'),
   },
+
+  // Teacher-facing, not Curio-in-character: a class roster read by an adult
+  // deciding what to do with the next lesson, not a line spoken to a child.
+  classInsight: {
+    system: `You are a concise teaching assistant for Curio-City, a fractions-learning app. A teacher is looking at their class's progress and wants a quick read on it.
+Write 2-3 short sentences, plain and professional - no character voice, no emoji, no markdown, no greeting.
+Call out concrete, actionable patterns: who looks stuck and on what, who is ready for something harder, anything worth a quick group review. Use names only if the data names specific students.
+If the data is too thin to support a real pattern (a brand-new class, everyone just starting), say something modest and encouraging instead of inventing a trend.`,
+    build: ({ detail }) => `Class progress data:\n${detail}`,
+  },
 };
 
 async function callIFM(intent, context) {
@@ -398,7 +408,10 @@ const server = createServer(async (req, res) => {
       const context = {
         objective: text(body.objective, 200),
         instruction: text(body.instruction, 300),
-        detail: text(body.detail, 300),
+        // classInsight sends a whole class's per-level completion counts,
+        // not one lesson's result - the other intents just won't use the
+        // extra room.
+        detail: text(body.detail, 1200),
         question: text(body.question, 300),
         mistakeCount: Number.isInteger(body.mistakeCount)
           ? Math.min(Math.max(body.mistakeCount, 0), 10)

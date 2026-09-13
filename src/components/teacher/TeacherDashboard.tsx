@@ -13,6 +13,7 @@ import { useAuth } from '../../state/auth';
 import { fetchClass, resetClassStudent, type ClassStudent } from '../../api';
 import { sfx } from '../../audio/sound';
 import { Logo } from '../layout/Logo';
+import { ClassInsights } from './ClassInsights';
 import './teacher.css';
 
 function levelStatus(
@@ -226,6 +227,12 @@ function AccountTeacherDashboard({ onLeave }: { onLeave: () => void }) {
               <div className="teacher__code">{code || '••••••'}</div>
             </header>
             {error && <p className="mode-gate__error">{error}</p>}
+            <ClassInsights
+              rows={students.map((student) => ({
+                name: student.name,
+                summary: describeProgress(normalizeProgress(student.progress)),
+              }))}
+            />
             {students.length === 0 ? (
               <section className="panel teacher__empty">
                 <p>No students have joined yet. Give them the class code above.</p>
@@ -330,6 +337,7 @@ function LocalTeacherDashboard({ onLeave }: { onLeave: () => void }) {
               </p>
             </header>
 
+            <ClassInsights rows={rows.map(({ student, summary }) => ({ name: student.name, summary }))} />
             {rows.length === 0 ? (
               <section className="panel teacher__empty">
                 <p>No students yet. Add a name, then have that student choose Student mode to play.</p>

@@ -22,7 +22,7 @@ const ENDPOINT = (import.meta.env.VITE_API_ENDPOINT ?? '/api').replace(/\/$/, ''
 const CALL_BUDGET = 15;
 let callsMade = 0;
 
-type Intent = 'hint' | 'praise' | 'recap' | 'ask';
+type Intent = 'hint' | 'praise' | 'recap' | 'ask' | 'classInsight';
 
 interface CurioRequest {
   objective?: string;
@@ -66,4 +66,8 @@ export const curio = {
   /** Answers a question the child asked in their own words. */
   ask: (question: string, objective?: string, signal?: AbortSignal) =>
     request('ask', { question, objective }, signal),
+
+  /** A teacher-facing read of the whole class's progress, not in character. */
+  classInsight: (classSummary: string) =>
+    request('classInsight', { objective: 'Class progress overview', detail: classSummary }),
 };

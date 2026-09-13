@@ -259,3 +259,18 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ------------------------------------------------------------ AI insights */
+
+.teacher__insights-text {
+  margin-top: 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.teacher__insights-text--muted {
+  color: var(--ink-faint);
+  font-weight: 500;
+}
