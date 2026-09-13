@@ -14,6 +14,7 @@ import { fetchClass, resetClassStudent, type ClassStudent } from '../../api';
 import { sfx } from '../../audio/sound';
 import { Logo } from '../layout/Logo';
 import { ClassInsights } from './ClassInsights';
+import { ParentUpdate } from './ParentUpdate';
 import './teacher.css';
 
 function levelStatus(
@@ -86,6 +87,8 @@ function StudentDetail({
           </div>
         </div>
       </header>
+
+      <ParentUpdate studentId={student.id} studentName={student.name} summary={snapshot} />
 
       {CITY_ORDER.map((cityId) => {
         const city = CITIES[cityId];

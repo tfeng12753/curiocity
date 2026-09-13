@@ -163,16 +163,24 @@ const INTENTS = {
   hint: {
     system: `${CURIO_PERSONA}
 The child is stuck. Give ONE short, warm nudge - at most two sentences - that gets them thinking without handing over the answer.
-Never state the answer, the exact numbers, or where to cut. Wonder out loud alongside them instead.`,
-    build: ({ objective, instruction, mistakeCount }) =>
+Never state the answer, the exact numbers, or where to cut. Wonder out loud alongside them instead.
+If earlier nudges for this same task are listed, say something meaningfully different from all of them - never repeat or lightly reword one.`,
+    build: ({ objective, instruction, mistakeCount, priorHints }) =>
       [
         `Task: ${objective}`,
         `Instruction: ${instruction}`,
         `The child has missed this ${mistakeCount} time${mistakeCount === 1 ? '' : 's'} in a row.`,
+        priorHints?.length
+          ? `Nudges already given for this task - do not repeat or reword these: ${priorHints
+              .map((hint) => `"${hint}"`)
+              .join('; ')}`
+          : '',
         mistakeCount >= 3
           ? 'They are getting frustrated - be extra warm, and make the nudge a little bigger.'
           : 'Keep it light - a small nudge is plenty.',
-      ].join('\n'),
+      ]
+        .filter(Boolean)
+        .join('\n'),
   },
 
   praise: {
@@ -210,6 +218,39 @@ Write 2-3 short sentences, plain and professional - no character voice, no emoji
 Call out concrete, actionable patterns: who looks stuck and on what, who is ready for something harder, anything worth a quick group review. Use names only if the data names specific students.
 If the data is too thin to support a real pattern (a brand-new class, everyone just starting), say something modest and encouraging instead of inventing a trend.`,
     build: ({ detail }) => `Class progress data:\n${detail}`,
+  },
+
+  // Also teacher-facing. Deliberately a distinct intent from classInsight
+  // rather than one prompt doing both jobs - "what's the pattern" and "what
+  // do I do about it" read very differently when a model tries to answer
+  // both in the same breath, and asking for them separately keeps each one
+  // sharp instead of a paragraph trying to do everything.
+  practiceIdeas: {
+    system: `You are a teaching assistant for Curio-City, a fractions-learning app. A teacher wants 2-3 short, concrete practice ideas based on their class's progress data below.
+Each idea is one sentence: name the student(s) if the data names specific ones, name the concept they need, and suggest one simple hands-on activity a teacher could actually do in a few minutes (real objects - a chocolate bar, paper strips, counters - not a worksheet or app screen).
+Plain text. No markdown, no numbered list, no emoji, no greeting.
+If nobody in the data looks stuck, say so briefly and suggest one way to stretch the students who are furthest ahead instead - do not invent a struggle that is not in the data.`,
+    build: ({ detail }) => `Class progress data:\n${detail}`,
+  },
+
+  // A warm, parent-facing note about ONE child - a different audience again
+  // from classInsight (a teacher deciding what to do next) and from Curio's
+  // own voice (talking directly to the child mid-lesson).
+  parentUpdate: {
+    system: `You write short home-to-school updates for Curio-City, a fractions-learning app. You are given one child's progress data and you write a warm, plain-English note a teacher could send home to that child's parent or carer.
+2-3 sentences. Specific and genuine - name what the child actually did, not a generic "doing great!". No character voice, no emoji, no markdown, no "Dear parent" greeting or sign-off, just the note itself.
+If the data shows very little progress yet, be encouraging and factual rather than inventing an achievement.`,
+    build: ({ objective, detail }) => `Child: ${objective}\nProgress data:\n${detail}`,
+  },
+
+  // The child speaks a request; this turns it into a menu choice rather
+  // than a free-form action, so a misheard word can at worst pick the
+  // wrong (still valid, still reviewed by the caller) numbered destination
+  // instead of the model inventing somewhere to go that does not exist.
+  navigate: {
+    system: `You turn a child's spoken request into a menu choice for a learning app called Curio-City. You are given a numbered list of valid destinations and what the child said.
+Reply with ONLY the number of the single best-matching destination, or the word NONE if nothing reasonably matches. No other words, no punctuation, no explanation.`,
+    build: ({ detail, question }) => `Destinations:\n${detail}\n\nThe child said: "${question}"`,
   },
 };
 
@@ -408,17 +449,27 @@ const server = createServer(async (req, res) => {
       const context = {
         objective: text(body.objective, 200),
         instruction: text(body.instruction, 300),
-        // classInsight sends a whole class's per-level completion counts,
-        // not one lesson's result - the other intents just won't use the
+        // classInsight/practiceIdeas send a whole class's per-level
+        // completion counts, navigate sends a destination menu - neither
+        // is one lesson's result, and the other intents just won't use the
         // extra room.
         detail: text(body.detail, 1200),
         question: text(body.question, 300),
+        // Only hint uses this - a short list of nudges already given for
+        // the current task, so a repeat miss doesn't get the same nudge
+        // twice. Capped hard: this rides along on every hint request.
+        priorHints: Array.isArray(body.priorHints)
+          ? body.priorHints
+              .filter((hint) => typeof hint === 'string' && hint.trim())
+              .slice(-3)
+              .map((hint) => hint.trim().slice(0, 200))
+          : [],
         mistakeCount: Number.isInteger(body.mistakeCount)
           ? Math.min(Math.max(body.mistakeCount, 0), 10)
           : 1,
       };
 
-      if (intent === 'ask' && !context.question) {
+      if ((intent === 'ask' || intent === 'navigate') && !context.question) {
         res.writeHead(400, { 'content-type': 'application/json' }).end(
           JSON.stringify({ error: 'question must be a non-empty string up to 300 chars' }),
         );
@@ -434,7 +485,7 @@ const server = createServer(async (req, res) => {
       // Praise is deliberately uncached: hearing the same celebration twice
       // is exactly what makes a canned line feel canned, and it is the one
       // intent whose whole value is sounding spontaneous.
-      const key = `${intent}::${context.objective}::${context.instruction}::${context.question}::${context.detail}::${context.mistakeCount}`;
+      const key = `${intent}::${context.objective}::${context.instruction}::${context.question}::${context.detail}::${context.mistakeCount}::${context.priorHints.join('|')}`;
       let reply = intent === 'praise' ? null : cacheGet(key);
       if (!reply) {
         reply = await callIFM(intent, context);

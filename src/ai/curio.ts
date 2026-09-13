@@ -22,7 +22,7 @@ const ENDPOINT = (import.meta.env.VITE_API_ENDPOINT ?? '/api').replace(/\/$/, ''
 const CALL_BUDGET = 15;
 let callsMade = 0;
 
-type Intent = 'hint' | 'praise' | 'recap' | 'ask' | 'classInsight';
+type Intent = 'hint' | 'praise' | 'recap' | 'ask' | 'classInsight' | 'practiceIdeas' | 'parentUpdate' | 'navigate';
 
 interface CurioRequest {
   objective?: string;
@@ -30,6 +30,7 @@ interface CurioRequest {
   detail?: string;
   question?: string;
   mistakeCount?: number;
+  priorHints?: string[];
 }
 
 async function request(intent: Intent, body: CurioRequest, signal?: AbortSignal) {
@@ -53,9 +54,11 @@ async function request(intent: Intent, body: CurioRequest, signal?: AbortSignal)
 }
 
 export const curio = {
-  /** A nudge when a child is stuck, that never gives the answer away. */
-  hint: (objective: string, instruction: string, mistakeCount: number) =>
-    request('hint', { objective, instruction, mistakeCount }),
+  /** A nudge when a child is stuck, that never gives the answer away.
+   *  `priorHints` are nudges already given for this same task, so a repeat
+   *  miss doesn't get the same one twice. */
+  hint: (objective: string, instruction: string, mistakeCount: number, priorHints?: string[]) =>
+    request('hint', { objective, instruction, mistakeCount, priorHints }),
 
   /** A celebration that names what they actually did. */
   praise: (objective: string, detail?: string) => request('praise', { objective, detail }),
@@ -70,4 +73,20 @@ export const curio = {
   /** A teacher-facing read of the whole class's progress, not in character. */
   classInsight: (classSummary: string) =>
     request('classInsight', { objective: 'Class progress overview', detail: classSummary }),
+
+  /** Concrete, hands-on practice suggestions for whichever students the
+   *  class data shows are struggling. */
+  practiceIdeas: (classSummary: string) =>
+    request('practiceIdeas', { objective: 'Practice ideas', detail: classSummary }),
+
+  /** A warm note about one child's progress, written for a parent. */
+  parentUpdate: (studentName: string, studentSummary: string) =>
+    request('parentUpdate', { objective: studentName, detail: studentSummary }),
+
+  /** Turns a spoken request into one of a numbered list of valid
+   *  destinations - `destinations` is that list, formatted for the prompt.
+   *  Returns the raw model reply (a number, or "NONE"); the caller is the
+   *  one that validates it against the real, current list before acting. */
+  navigate: (transcript: string, destinations: string) =>
+    request('navigate', { objective: 'Voice navigation', question: transcript, detail: destinations }),
 };

@@ -21,6 +21,7 @@ import { FingerCursor } from './tracker/FingerCursor';
 import { CameraGate } from './tracker/CameraGate';
 import { TrackerModeControl } from './tracker/TrackerModeControl';
 import { HandScrollAssist } from './tracker/HandScrollAssist';
+import { VoiceNav } from './tracker/VoiceNav';
 import { useTrackerState } from './tracker/useTracker';
 import './components/mode/mode.css';
 
@@ -196,6 +197,13 @@ function StudentWorld({ onLeave }: { onLeave: () => void }) {
       <FingerCursor active={onboarded} />
       {onboarded && <HandScrollAssist />}
       {view.name !== 'lesson' && <TrackerModeControl className="tracker-mode--floating" />}
+      <VoiceNav
+        view={view}
+        onGoWorld={goWorld}
+        onGoCity={goCity}
+        onOpenLevel={(targetCityId, levelId) => setView({ name: 'entrance', cityId: targetCityId, levelId })}
+        onOpenPanel={setPanel}
+      />
 
       <AnimatePresence>{!onboarded && <CameraGate key="onboarding" onDone={() => {}} />}</AnimatePresence>
     </div>

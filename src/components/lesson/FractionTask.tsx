@@ -12,12 +12,18 @@ import {
   areEqualParts,
   buildRegions,
   isCutOnTarget,
+  isDuplicateCut,
   targetFractions,
   type Cut,
   type CutAxis,
   type Region,
   type ShapeKind,
 } from './fractionGeometry';
+
+/** Misses on the *current* cut before Curio offers to place one for them.
+ *  A hint nudges toward the answer; this is the next rung up when nudging
+ *  alone isn't landing - real, safe scaffolding rather than more words. */
+const SCAFFOLD_AFTER_MISSES = 4;
 
 export interface FractionTaskProps {
   kind: ShapeKind;
@@ -82,6 +88,9 @@ export function FractionTask({
    */
   const prefetchedLine = useRef<string | null>(null);
   const prefetching = useRef(false);
+  /** AI-generated hints/nudges already spoken for this task, so escalating
+   *  ones don't repeat themselves. */
+  const priorHints = useRef<string[]>([]);
 
   const cutsToGo = Math.max(0, requiredCuts - cuts.length);
   const regions = useMemo(() => buildRegions(kind, cuts), [kind, cuts]);
@@ -113,7 +122,7 @@ export function FractionTask({
     try {
       const currentInstruction =
         phase === 'shade' ? (shadeInstruction ?? `Colour ${requiredShaded} equal parts.`) : cutInstruction;
-      const line = await curio.hint(objective, currentInstruction, misses);
+      const line = await curio.hint(objective, currentInstruction, misses, priorHints.current);
       if (line) prefetchedLine.current = line;
     } finally {
       prefetching.current = false;
@@ -139,6 +148,7 @@ export function FractionTask({
     const ready = prefetchedLine.current;
     prefetchedLine.current = null;
     setLine(ready ?? (retryLine ?? retryLineFor(misses)));
+    if (ready) priorHints.current = [...priorHints.current, ready].slice(-3);
     setMistakeCount(misses);
     sfx.play('retry');
     // Start warming the next one now, so it is waiting if they miss again.
@@ -209,9 +219,34 @@ export function FractionTask({
     const currentInstruction =
       phase === 'shade' ? (shadeInstruction ?? `Colour ${requiredShaded} equal parts.`) : cutInstruction;
     setHintLoading(true);
-    const hint = await curio.hint(objective, currentInstruction, mistakeCount);
+    const hint = await curio.hint(objective, currentInstruction, mistakeCount, priorHints.current);
     setHintLoading(false);
-    if (hint) setLine(hint);
+    if (hint) {
+      setLine(hint);
+      priorHints.current = [...priorHints.current, hint].slice(-3);
+    }
+  };
+
+  // Radial cuts (the pizza) don't have a target list the way v/h cuts do -
+  // each one is an angle picked at commit time, not a position from a fixed
+  // set - so there's nothing here to place on the student's behalf. Scoped
+  // to straight-line tasks (thirds, sixths, the harder chocolate-bar splits)
+  // where "the next cut" is always one of a small, known set of positions.
+  const canScaffold = phase === 'cut' && cutsToGo > 0 && !(allow ?? []).includes('radial');
+
+  const applyScaffold = () => {
+    const axis = (effectiveAllow?.[0] ?? 'v') as CutAxis;
+    const candidate = targets
+      .map((t): Cut => ({ axis, t }))
+      .find((entry) => !isDuplicateCut(cuts, entry));
+    if (!candidate) return;
+
+    sfx.play('tap');
+    const wasLastCut = cuts.length + 1 >= requiredCuts;
+    handleCut(candidate);
+    // Only override the line if that wasn't the finishing cut - otherwise
+    // this would stomp the success/move-to-shading line handleCut just set.
+    if (!wasLastCut) setLine("There - I placed one. Can you finish the rest?");
   };
 
   const shadedCount = shaded.length;
@@ -293,16 +328,26 @@ export function FractionTask({
                 : 'Hold your finger still over a part to colour it (or click).'}
             </span>
             {mistakeCount >= 2 && (
-              <button className="btn btn--ghost btn--sm" onClick={requestHint} disabled={hintLoading}>
-                {hintLoading ? (
-                  'Thinking...'
-                ) : (
-                  <>
-                    <Icon name="bulb" size={18} />
-                    Get a hint from Curio
-                  </>
-                )}
-              </button>
+              <DwellTarget onActivate={requestHint} disabled={hintLoading}>
+                <button className="btn btn--ghost btn--sm" onClick={requestHint} disabled={hintLoading}>
+                  {hintLoading ? (
+                    'Thinking...'
+                  ) : (
+                    <>
+                      <Icon name="bulb" size={18} />
+                      Get a hint from Curio
+                    </>
+                  )}
+                </button>
+              </DwellTarget>
+            )}
+            {canScaffold && mistakeCount >= SCAFFOLD_AFTER_MISSES && (
+              <DwellTarget onActivate={applyScaffold}>
+                <button className="btn btn--ghost btn--sm" onClick={applyScaffold}>
+                  <Icon name="bulb" size={18} />
+                  Help me with this one
+                </button>
+              </DwellTarget>
             )}
           </>
         )}

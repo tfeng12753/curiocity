@@ -10,6 +10,8 @@ interface Row {
   summary: ReturnType<typeof describeProgress>;
 }
 
+type Status = 'idle' | 'loading' | 'done' | 'error';
+
 const NAME_LIST_CAP = 6;
 
 function namesWithOverflow(names: string[]): string {
@@ -56,25 +58,33 @@ function buildClassSummary(rows: Row[]): string {
   return lines.join(' ');
 }
 
-/**
- * A one-tap AI read of the whole roster, sitting above the individual
- * student cards - "who needs a hand, who's ready for more" is exactly the
- * kind of pattern that's tedious to spot by eye across a dozen-plus rows
- * but cheap for a model to summarise from the same data already on screen.
- */
-export function ClassInsights({ rows }: { rows: Row[] }) {
-  const { aiEnabled } = useSettings();
-  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
-  const [insight, setInsight] = useState<string | null>(null);
-
-  if (!aiEnabled || rows.length === 0) return null;
+/** One AI-backed action card: a title, a button, and whatever it returns.
+ *  classInsight and practiceIdeas are two separate questions ("what's the
+ *  pattern" vs "what do I do about it") rather than one prompt trying to
+ * answer both, so each stays sharp - this is the one bit of UI shared
+ *  between them. */
+function InsightCard({
+  title,
+  idleHint,
+  buttonLabel,
+  loadingLabel,
+  onRun,
+}: {
+  title: string;
+  idleHint: string;
+  buttonLabel: string;
+  loadingLabel: string;
+  onRun: () => Promise<string | null>;
+}) {
+  const [status, setStatus] = useState<Status>('idle');
+  const [text, setText] = useState<string | null>(null);
 
   const run = async () => {
     setStatus('loading');
     sfx.play('tap');
-    const reply = await curio.classInsight(buildClassSummary(rows));
+    const reply = await onRun();
     if (reply) {
-      setInsight(reply);
+      setText(reply);
       setStatus('done');
     } else {
       setStatus('error');
@@ -84,27 +94,55 @@ export function ClassInsights({ rows }: { rows: Row[] }) {
   return (
     <section className="panel teacher__insights">
       <div className="drawer__city-head">
-        <strong>✨ Class insights</strong>
+        <strong>{title}</strong>
         {status !== 'loading' && (
           <button type="button" className="btn btn--ghost btn--sm" onClick={run}>
-            {insight ? 'Refresh' : 'Get insights'}
+            {text ? 'Refresh' : buttonLabel}
           </button>
         )}
       </div>
 
-      {status === 'idle' && (
-        <p className="teacher__insights-text teacher__insights-text--muted">
-          An AI-generated read of who might need a hand and who's ready for more, from the same
-          progress shown below.
-        </p>
-      )}
-      {status === 'loading' && <p className="teacher__insights-text">Looking over the class...</p>}
+      {status === 'idle' && <p className="teacher__insights-text teacher__insights-text--muted">{idleHint}</p>}
+      {status === 'loading' && <p className="teacher__insights-text">{loadingLabel}</p>}
       {status === 'error' && (
         <p className="teacher__insights-text teacher__insights-text--muted">
-          Couldn't generate insights right now - try again in a moment.
+          Couldn't generate this right now - try again in a moment.
         </p>
       )}
-      {status === 'done' && insight && <p className="teacher__insights-text">{insight}</p>}
+      {status === 'done' && text && <p className="teacher__insights-text">{text}</p>}
     </section>
+  );
+}
+
+/**
+ * Two one-tap AI reads of the whole roster, sitting above the individual
+ * student cards - "who needs a hand, who's ready for more, what do I
+ * actually do about it" is exactly the kind of pattern that's tedious to
+ * spot by eye across a dozen-plus rows but cheap for a model to summarise
+ * from the same data already on screen.
+ */
+export function ClassInsights({ rows }: { rows: Row[] }) {
+  const { aiEnabled } = useSettings();
+  if (!aiEnabled || rows.length === 0) return null;
+
+  const summary = () => buildClassSummary(rows);
+
+  return (
+    <>
+      <InsightCard
+        title="✨ Class insights"
+        idleHint="An AI-generated read of who might need a hand and who's ready for more, from the same progress shown below."
+        buttonLabel="Get insights"
+        loadingLabel="Looking over the class..."
+        onRun={() => curio.classInsight(summary())}
+      />
+      <InsightCard
+        title="💡 Practice ideas"
+        idleHint="A couple of concrete, hands-on activities for whichever students look like they need them."
+        buttonLabel="Get ideas"
+        loadingLabel="Thinking of some ideas..."
+        onRun={() => curio.practiceIdeas(summary())}
+      />
+    </>
   );
 }

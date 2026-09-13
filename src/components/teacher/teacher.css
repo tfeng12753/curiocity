@@ -274,3 +274,7 @@
   color: var(--ink-faint);
   font-weight: 500;
 }
+
+.teacher__insights-copy {
+  margin-top: 10px;
+}
