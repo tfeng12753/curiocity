@@ -87,7 +87,7 @@ export function ModeGate({ onLocalChoose }: { onLocalChoose: (role: GateRole) =>
 
           {authError && <p className="mode-gate__error">{authError}</p>}
 
-          <button type="button" className="btn" onClick={goGoogle} disabled={!googleReady && serverUp !== false}>
+          <button type="button" className="btn" onClick={goGoogle} disabled={!googleReady}>
             Continue with Google
           </button>
 

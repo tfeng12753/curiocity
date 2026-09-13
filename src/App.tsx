@@ -11,6 +11,7 @@ import { LevelEntrance } from './components/level/LevelEntrance';
 import { FractionLesson } from './components/lesson/FractionLesson';
 import { FractionLesson2 } from './components/lesson/FractionLesson2';
 import { FractionLesson3 } from './components/lesson/FractionLesson3';
+import { FractionLesson4 } from './components/lesson/FractionLesson4';
 import { TopNav, type NavPanel } from './components/layout/TopNav';
 import { NavDrawer } from './components/layout/NavDrawer';
 import { TeacherDashboard } from './components/teacher/TeacherDashboard';
@@ -19,6 +20,7 @@ import { StudentPicker } from './components/mode/StudentPicker';
 import { FingerCursor } from './tracker/FingerCursor';
 import { CameraGate } from './tracker/CameraGate';
 import { TrackerModeControl } from './tracker/TrackerModeControl';
+import { HandScrollAssist } from './tracker/HandScrollAssist';
 import { useTrackerState } from './tracker/useTracker';
 import './components/mode/mode.css';
 
@@ -32,6 +34,7 @@ const LESSON_COMPONENTS: Record<string, ComponentType<LessonProps>> = {
   fractions: FractionLesson,
   'fractions-2': FractionLesson2,
   'fractions-3': FractionLesson3,
+  'alien-1': FractionLesson4,
 };
 
 type View =
@@ -191,6 +194,7 @@ function StudentWorld({ onLeave }: { onLeave: () => void }) {
       </AnimatePresence>
 
       <FingerCursor active={onboarded} />
+      {onboarded && <HandScrollAssist />}
       {view.name !== 'lesson' && <TrackerModeControl className="tracker-mode--floating" />}
 
       <AnimatePresence>{!onboarded && <CameraGate key="onboarding" onDone={() => {}} />}</AnimatePresence>

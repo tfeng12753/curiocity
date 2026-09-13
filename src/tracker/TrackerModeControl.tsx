@@ -2,6 +2,7 @@ import { sfx } from '../audio/sound';
 import { tracker } from './trackerStore';
 import { useTrackerState } from './useTracker';
 import { Icon } from '../components/icons/Icon';
+import { DwellTarget } from './DwellTarget';
 
 interface TrackerModeControlProps {
   /** Lets a host (e.g. the lesson HUD) lay this out inline instead of as a
@@ -39,13 +40,17 @@ export function TrackerModeControl({ className }: TrackerModeControlProps) {
           {active ? 'Finger' : status === 'starting' ? 'Starting' : 'Pointer'} mode
         </span>
         {active ? (
-          <button className="btn btn--ghost btn--sm" onClick={backToPointer}>
-            Use pointer
-          </button>
+          <DwellTarget onActivate={backToPointer}>
+            <button className="btn btn--ghost btn--sm" onClick={backToPointer}>
+              Use pointer
+            </button>
+          </DwellTarget>
         ) : (
-          <button className="btn btn--ghost btn--sm" onClick={useCamera} disabled={status === 'starting'}>
-            Use camera
-          </button>
+          <DwellTarget onActivate={useCamera} disabled={status === 'starting'}>
+            <button className="btn btn--ghost btn--sm" onClick={useCamera} disabled={status === 'starting'}>
+              Use camera
+            </button>
+          </DwellTarget>
         )}
       </div>
       {status === 'error' && error && <span className="tracker-mode__error">{error}</span>}

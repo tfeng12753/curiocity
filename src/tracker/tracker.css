@@ -562,3 +562,46 @@
   color: var(--ink-faint);
   line-height: 1.4;
 }
+
+/* ------------------------------------------------------- hand scroll cue */
+
+/* Tells the student their fingertip near the top/bottom edge is doing
+   something - the auto-scroll it triggers (see HandScrollAssist) would
+   otherwise look like the page just slowly drifting on its own. */
+.hand-scroll-cue {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8600;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(122, 92, 240, 0.92);
+  color: #fff;
+  font-size: 1.1rem;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  animation: hand-scroll-cue-pulse 0.9s ease-in-out infinite;
+}
+
+.hand-scroll-cue--up {
+  top: 14px;
+}
+
+.hand-scroll-cue--down {
+  bottom: 14px;
+}
+
+@keyframes hand-scroll-cue-pulse {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.12);
+  }
+}

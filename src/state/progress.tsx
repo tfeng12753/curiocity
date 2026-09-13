@@ -60,6 +60,12 @@ export const BADGES: Record<string, BadgeDefinition> = {
     description: 'Aced the fraction challenge and compared fractions like a pro.',
     icon: 'rocket',
   },
+  'alien-landing-navigator': {
+    id: 'alien-landing-navigator',
+    name: 'Alien Landing Navigator',
+    description: 'Split the landing strip into fifths and tenths.',
+    icon: 'sparkle',
+  },
 };
 
 export interface ProgressState {

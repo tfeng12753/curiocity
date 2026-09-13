@@ -225,6 +225,37 @@ let handMissingFrames = 0;
 const filterX = makeOneEuroFilter();
 const filterY = makeOneEuroFilter();
 
+// --- reframe/glitch guard -------------------------------------------------
+// rawX/rawY assume the camera's field of view is fixed, but it isn't always:
+// newer MacBooks auto-reframe the shot (Center Stage panning/zooming to keep
+// a face centred), and MediaPipe itself occasionally mis-locates a landmark
+// for a single frame. Either one otherwise reads as the hand teleporting -
+// the One Euro filter's own adaptive speed cutoff actually makes this worse,
+// since it smooths *less* the "faster" a jump looks. Capping how far a raw
+// sample may move in one frame, before it ever reaches the filter, absorbs
+// a sudden reframe as a fast-but-continuous slide over the next few frames
+// instead of an instant snap - while staying far too generous to ever
+// clip a real, deliberate swipe.
+const MAX_JUMP_SCREENS_PER_SEC = 4;
+let lastRawX: number | null = null;
+let lastRawY: number | null = null;
+let lastRawT: number | null = null;
+
+function clampJump(raw: number, last: number | null, lastT: number | null, now: number, span: number): number {
+  if (last === null || lastT === null) return raw;
+  const dt = Math.max(now - lastT, 1 / 120);
+  const maxStep = span * MAX_JUMP_SCREENS_PER_SEC * dt;
+  const delta = raw - last;
+  if (Math.abs(delta) <= maxStep) return raw;
+  return last + Math.sign(delta) * maxStep;
+}
+
+function resetJumpGuard() {
+  lastRawX = null;
+  lastRawY = null;
+  lastRawT = null;
+}
+
 // Intent is estimated from the *smoothed* position, not the raw landmark, so
 // sensor jitter cannot masquerade as velocity and keep `settle` pinned at 0
 // while the hand is actually holding still.
@@ -516,6 +547,7 @@ function loop() {
     if (handMissingFrames > 6 && state.handVisible) {
       filterX.reset();
       filterY.reset();
+      resetJumpGuard();
       handIntent.reset();
       resetActivateDetector();
       patchState({ handVisible: false });
@@ -545,8 +577,13 @@ function loop() {
   const now = performance.now() / 1000;
 
   // Mirror x so moving right on screen matches moving right in real life.
-  const rawX = (1 - tip.x) * window.innerWidth;
-  const rawY = tip.y * window.innerHeight;
+  const uncappedX = (1 - tip.x) * window.innerWidth;
+  const uncappedY = tip.y * window.innerHeight;
+  const rawX = clampJump(uncappedX, lastRawX, lastRawT, now, window.innerWidth);
+  const rawY = clampJump(uncappedY, lastRawY, lastRawT, now, window.innerHeight);
+  lastRawX = rawX;
+  lastRawY = rawY;
+  lastRawT = now;
 
   const handSpan = Math.hypot(wrist.x - landmarks[9].x, wrist.y - landmarks[9].y) || 0.2;
   const pinchDistance = Math.hypot(tip.x - thumb.x, tip.y - thumb.y);
@@ -725,6 +762,7 @@ export const tracker = {
     handMissingFrames = 0;
     filterX.reset();
     filterY.reset();
+    resetJumpGuard();
     handIntent.reset();
     resetActivateDetector();
     cancelAnimationFrame(rafId);

@@ -9,6 +9,7 @@ import { sfx } from '../../audio/sound';
 import { settings, type VoiceMode } from '../../state/settings';
 import { useSettings } from '../../hooks/useSettings';
 import { CameraSettings } from '../../tracker/CameraSettings';
+import { DwellTarget } from '../../tracker/DwellTarget';
 import type { NavPanel } from './TopNav';
 import './layout.css';
 
@@ -32,9 +33,11 @@ export function NavDrawer({ panel, onClose }: { panel: NavPanel; onClose: () => 
         exit={{ x: '100%' }}
         transition={{ type: 'spring', stiffness: 260, damping: 30 }}
       >
-        <button className="drawer__close" onClick={onClose} aria-label="Close panel">
-          ✕
-        </button>
+        <DwellTarget onActivate={onClose}>
+          <button className="drawer__close" onClick={onClose} aria-label="Close panel">
+            ✕
+          </button>
+        </DwellTarget>
 
         {panel === 'progress' ? (
           <>
@@ -292,25 +295,29 @@ function SettingsPanel() {
           <strong>Curio’s voice</strong>
         </div>
         <div className="setting-list">
-          {VOICE_MODES.map((option) => (
-            <button
-              key={option.id}
-              className={`setting-option ${voiceMode === option.id ? 'is-on' : ''}`}
-              onClick={() => {
-                settings.setVoiceMode(option.id);
-                sfx.play('tap');
-              }}
-              aria-pressed={voiceMode === option.id}
-            >
-              <span className="setting-option__mark" aria-hidden="true">
-                {voiceMode === option.id ? '●' : ''}
-              </span>
-              <span>
-                <strong>{option.label}</strong>
-                <span>{option.blurb}</span>
-              </span>
-            </button>
-          ))}
+          {VOICE_MODES.map((option) => {
+            const activate = () => {
+              settings.setVoiceMode(option.id);
+              sfx.play('tap');
+            };
+            return (
+              <DwellTarget key={option.id} onActivate={activate}>
+                <button
+                  className={`setting-option ${voiceMode === option.id ? 'is-on' : ''}`}
+                  onClick={activate}
+                  aria-pressed={voiceMode === option.id}
+                >
+                  <span className="setting-option__mark" aria-hidden="true">
+                    {voiceMode === option.id ? '●' : ''}
+                  </span>
+                  <span>
+                    <strong>{option.label}</strong>
+                    <span>{option.blurb}</span>
+                  </span>
+                </button>
+              </DwellTarget>
+            );
+          })}
         </div>
       </section>
 
@@ -319,26 +326,33 @@ function SettingsPanel() {
           <strong>Curio’s answers</strong>
         </div>
         <div className="setting-list">
-          <button
-            className={`setting-option ${aiEnabled ? 'is-on' : ''}`}
-            onClick={() => {
+          <DwellTarget
+            onActivate={() => {
               settings.setAiEnabled(!aiEnabled);
               sfx.play('tap');
             }}
-            aria-pressed={aiEnabled}
           >
-            <span className="setting-option__mark" aria-hidden="true">
-              {aiEnabled ? '✓' : ''}
-            </span>
-            <span>
-              <strong>Let Curio think for herself</strong>
-              <span>
-                Her hints, the “Ask me anything” box, and the little summary at the end of a
-                lesson. Switched off, she uses her written lines instead and the question box
-                is hidden.
+            <button
+              className={`setting-option ${aiEnabled ? 'is-on' : ''}`}
+              onClick={() => {
+                settings.setAiEnabled(!aiEnabled);
+                sfx.play('tap');
+              }}
+              aria-pressed={aiEnabled}
+            >
+              <span className="setting-option__mark" aria-hidden="true">
+                {aiEnabled ? '✓' : ''}
               </span>
-            </span>
-          </button>
+              <span>
+                <strong>Let Curio think for herself</strong>
+                <span>
+                  Her hints, the “Ask me anything” box, and the little summary at the end of a
+                  lesson. Switched off, she uses her written lines instead and the question box
+                  is hidden.
+                </span>
+              </span>
+            </button>
+          </DwellTarget>
         </div>
       </section>
 

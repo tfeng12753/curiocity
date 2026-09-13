@@ -130,7 +130,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const startGoogleRedirect = useCallback((input: { role: 'student' | 'teacher'; classCode?: string }) => {
     setAuthError(null);
-    redirectToGoogle(input);
+    try {
+      redirectToGoogle(input);
+    } catch (caught) {
+      // redirectToGoogle throws synchronously when the client id isn't
+      // configured, before any navigation happens - left uncaught, that was an
+      // unhandled exception in a click handler, so the button did nothing and
+      // said nothing. Every other failure mode here (server down, sign-in
+      // cancelled) already surfaces through authError; this one should too.
+      setAuthError(caught instanceof Error ? caught.message : 'Could not start Google sign-in.');
+    }
   }, []);
 
   const logout = useCallback(async () => {

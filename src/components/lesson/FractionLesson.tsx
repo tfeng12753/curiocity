@@ -4,6 +4,7 @@ import { sfx } from '../../audio/sound';
 import { CameraStage } from '../../tracker/CameraStage';
 import { AirTrail } from '../../tracker/AirTrail';
 import { TrackerModeControl } from '../../tracker/TrackerModeControl';
+import { DwellTarget } from '../../tracker/DwellTarget';
 import { tracker } from '../../tracker/trackerStore';
 import { useTrackerState } from '../../tracker/useTracker';
 import { FractionTask } from './FractionTask';
@@ -296,9 +297,11 @@ export function FractionLesson({ onExit, onKeepExploring }: FractionLessonProps)
 
       {!isComplete && (
         <header className="lesson__hud">
-          <button className="city__back" onClick={onExit}>
-            ← Math City
-          </button>
+          <DwellTarget onActivate={onExit}>
+            <button className="city__back" onClick={onExit}>
+              ← Math City
+            </button>
+          </DwellTarget>
 
           <div className="lesson__crumbs">
             <span className="lesson__path">Math City / Fractions / Level 01</span>
