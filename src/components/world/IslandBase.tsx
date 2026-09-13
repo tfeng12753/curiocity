@@ -67,6 +67,63 @@ export function IslandBase({
   );
 }
 
+interface IsletProps {
+  id: string;
+  size?: number;
+  land?: string;
+  landShade?: string;
+  rock?: string;
+  rockShade?: string;
+  /** Not-yet-earned state: the same shape, drained of colour rather than
+   *  swapped for a flat placeholder, so it still reads as "an island". */
+  muted?: boolean;
+}
+
+/**
+ * A small standalone islet - the same rounded-plateau-on-a-rock-chunk
+ * language as IslandBase, simplified (no waterfall, no children slot) and
+ * scaled for a grid tile rather than a full scene. Used to give small
+ * things (a badge, an achievement) the same "a place in Curio-City" feel
+ * the big islands have, instead of sitting in a plain flat card.
+ */
+export function Islet({ id, size = 84, land = '#7fe0a1', landShade = '#3cb977', rock = '#9a83f5', rockShade = '#5f43cc', muted = false }: IsletProps) {
+  const landFill = muted ? '#d9d9e8' : land;
+  const landShadeFill = muted ? '#bcbcd2' : landShade;
+  const rockFill = muted ? '#c7c7da' : rock;
+  const rockShadeFill = muted ? '#a7a7bf' : rockShade;
+
+  return (
+    <svg viewBox="0 0 100 88" width={size} height={size * 0.88} className="islet-svg" aria-hidden="true">
+      <defs>
+        <linearGradient id={`${id}-islet-rock`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={rockFill} />
+          <stop offset="100%" stopColor={rockShadeFill} />
+        </linearGradient>
+        <linearGradient id={`${id}-islet-land`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={landFill} />
+          <stop offset="100%" stopColor={landShadeFill} />
+        </linearGradient>
+      </defs>
+      <path
+        d="M17 44 C23 64 37 79 50 84 C63 79 77 64 83 44 C69 55 31 55 17 44 Z"
+        fill={`url(#${id}-islet-rock)`}
+      />
+      <ellipse cx="50" cy="40" rx="41" ry="16" fill={landShadeFill} />
+      <ellipse cx="50" cy="36" rx="41" ry="16" fill={`url(#${id}-islet-land)`} />
+      <ellipse
+        cx="50"
+        cy="36"
+        rx="41"
+        ry="16"
+        fill="none"
+        stroke="#fff"
+        strokeOpacity={muted ? 0.16 : 0.32}
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
 export function Tree({ x, y, scale = 1, tone = '#2fae6b' }: { x: number; y: number; scale?: number; tone?: string }) {
   return (
     <g transform={`translate(${x} ${y}) scale(${scale})`}>

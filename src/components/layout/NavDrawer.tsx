@@ -4,6 +4,8 @@ import { CITIES, CITY_ORDER } from '../../data/cities';
 import { BADGES, useProgress } from '../../state/progress';
 import { ALL_COSMETICS, SLOT_META, type CosmeticId, type SlotMeta } from '../../data/cosmetics';
 import { PetGlyph, PlayerCharacter } from '../player/PlayerCharacter';
+import { CITY_ILLUSTRATIONS } from '../world/CityIllustrations';
+import { Islet } from '../world/IslandBase';
 import { Icon } from '../icons/Icon';
 import { sfx } from '../../audio/sound';
 import { settings, type VoiceMode } from '../../state/settings';
@@ -45,37 +47,50 @@ export function NavDrawer({ panel, onClose }: { panel: NavPanel; onClose: () => 
             <p className="drawer__sub">
               {totalComplete} of {totalLevels} destinations explored across Curio-City.
             </p>
-            {CITY_ORDER.map((cityId) => {
+            {CITY_ORDER.map((cityId, index) => {
               const city = CITIES[cityId];
               const { done, total } = cityProgress(cityId);
+              const Illustration = CITY_ILLUSTRATIONS[cityId];
               return (
-                <section className="drawer__city" key={cityId} data-city={cityId}>
-                  <div className="drawer__city-head">
-                    <strong>{city.name}</strong>
-                    <span className="pill">
-                      {done} / {total}
-                    </span>
+                <motion.section
+                  className="drawer__city drawer__city--island"
+                  key={cityId}
+                  data-city={cityId}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.07, duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <div className="drawer__city-island">
+                    <Illustration animated={false} />
                   </div>
-                  <div className="progress-bar">
-                    <div className="progress-bar__fill" style={{ width: `${(done / total) * 100}%` }} />
+                  <div className="drawer__city-body">
+                    <div className="drawer__city-head">
+                      <strong>{city.name}</strong>
+                      <span className="pill">
+                        {done} / {total}
+                      </span>
+                    </div>
+                    <div className="progress-bar">
+                      <div className="progress-bar__fill" style={{ width: `${(done / total) * 100}%` }} />
+                    </div>
+                    <ul className="drawer__levels">
+                      {city.levels.map((level) => {
+                        const done_ = isLevelComplete(cityId, level.id);
+                        return (
+                          <li key={level.id} className={done_ ? 'is-done' : ''}>
+                            <span className="drawer__tick">{done_ ? '✓' : level.index}</span>
+                            {level.name}
+                            {level.status === 'soon' && !done_ && (
+                              <span style={{ marginLeft: 'auto', fontSize: '0.72rem', opacity: 0.7 }}>
+                                Coming soon
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </div>
-                  <ul className="drawer__levels">
-                    {city.levels.map((level) => {
-                      const done_ = isLevelComplete(cityId, level.id);
-                      return (
-                        <li key={level.id} className={done_ ? 'is-done' : ''}>
-                          <span className="drawer__tick">{done_ ? '✓' : level.index}</span>
-                          {level.name}
-                          {level.status === 'soon' && !done_ && (
-                            <span style={{ marginLeft: 'auto', fontSize: '0.72rem', opacity: 0.7 }}>
-                              Coming soon
-                            </span>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
+                </motion.section>
               );
             })}
           </>
@@ -84,16 +99,25 @@ export function NavDrawer({ panel, onClose }: { panel: NavPanel; onClose: () => 
             <h2>Achievements</h2>
             <p className="drawer__sub">Badges you collect by finishing adventures.</p>
             <div className="badge-grid">
-              {Object.values(BADGES).map((badge) => {
+              {Object.values(BADGES).map((badge, index) => {
                 const earned = badges.includes(badge.id);
                 return (
-                  <div className={`badge-card ${earned ? 'is-earned' : ''}`} key={badge.id}>
-                    <div className="badge-card__icon">
-                      <Icon name={badge.icon} size={44} />
+                  <motion.div
+                    className={`badge-card badge-card--island ${earned ? 'is-earned' : ''}`}
+                    key={badge.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.04, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <div className="badge-card__island">
+                      <Islet id={badge.id} size={72} muted={!earned} />
+                      <span className="badge-card__icon">
+                        <Icon name={badge.icon} size={32} />
+                      </span>
                     </div>
                     <strong>{badge.name}</strong>
                     <span>{earned ? badge.description : 'Not earned yet'}</span>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
