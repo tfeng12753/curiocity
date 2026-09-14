@@ -72,6 +72,12 @@ export const BADGES: Record<string, BadgeDefinition> = {
     description: 'Found the ramp height for three different targets.',
     icon: 'ball',
   },
+  'atom-builder': {
+    id: 'atom-builder',
+    name: 'Atom Builder',
+    description: 'Built hydrogen, helium and carbon, particle by particle.',
+    icon: 'atom',
+  },
 };
 
 export interface ProgressState {

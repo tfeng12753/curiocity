@@ -250,17 +250,23 @@ export const CITIES: Record<CityId, CityDefinition> = {
     tagline: 'Atoms, elements, reactions & materials',
     blurb: 'Mix, react, discover. The building blocks of our world.',
     cta: 'Explore',
-    status: 'soon',
+    status: 'playable',
     levels: [
       {
         id: 'atoms',
         index: 1,
         name: 'Atoms & Elements',
-        tagline: 'Meet the tiniest builders.',
+        tagline: 'Tap particles together and build real elements.',
         x: 16,
         y: 32,
-        status: 'soon',
+        status: 'playable',
         landmark: 'atom-tower',
+        coinReward: 20,
+        learningPoints: [
+          'Atoms are built from protons, neutrons and electrons',
+          'Protons and neutrons pack into the nucleus, electrons orbit around it',
+          'Build hydrogen, helium and carbon, one particle at a time',
+        ],
       },
       {
         id: 'reactions',
