@@ -1,5 +1,15 @@
+const DEFAULT_SYMBOLS = ['1/2', '1/4', '3/4', '2/4', '1/3'];
+
+interface WorkshopBackdropProps {
+  challenge?: boolean;
+  /** What floats past in the background - fraction notation by default, but
+   *  a non-maths lesson (Motion Ramps, say) can pass its own small set
+   *  instead of drifting fraction symbols behind a physics scene. */
+  symbols?: string[];
+}
+
 /** The Fraction Workshop itself: shelves, a work table, and floating symbols. */
-export function WorkshopBackdrop({ challenge = false }: { challenge?: boolean }) {
+export function WorkshopBackdrop({ challenge = false, symbols = DEFAULT_SYMBOLS }: WorkshopBackdropProps) {
   return (
     <div className={`workshop ${challenge ? 'workshop--challenge' : ''}`} aria-hidden="true">
       <div className="workshop__spot" />
@@ -32,7 +42,7 @@ export function WorkshopBackdrop({ challenge = false }: { challenge?: boolean })
       </svg>
 
       <div className="workshop__symbols">
-        {['1/2', '1/4', '3/4', '2/4', '1/3'].map((symbol, i) => (
+        {symbols.map((symbol, i) => (
           <span key={symbol} style={{ animationDelay: `${i * 1.3}s` }}>
             {symbol}
           </span>

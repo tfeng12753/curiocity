@@ -183,17 +183,23 @@ export const CITIES: Record<CityId, CityDefinition> = {
     tagline: 'Motion, forces, energy & matter',
     blurb: 'Discover how things move. See the world in action.',
     cta: 'Explore',
-    status: 'soon',
+    status: 'playable',
     levels: [
       {
         id: 'motion',
         index: 1,
         name: 'Motion Ramps',
-        tagline: 'Push, roll, race, repeat.',
+        tagline: 'Set the height, roll the ball, chase the flag.',
         x: 16,
         y: 60,
-        status: 'soon',
+        status: 'playable',
         landmark: 'motion-ramp',
+        coinReward: 20,
+        learningPoints: [
+          'A taller ramp sends a ball rolling faster',
+          'More speed at the bottom means it rolls farther',
+          'Aim for three flags at three different distances',
+        ],
       },
       {
         id: 'energy',

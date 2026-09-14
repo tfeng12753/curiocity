@@ -179,7 +179,7 @@ export function LessonComplete({
       <div className="complete__actions">
         <DwellTarget onActivate={onReturn} dwellMs={800}>
           <button className="btn btn--lg btn--sun" onClick={onReturn}>
-            Return to Math City
+            Return to {CITIES[cityId].name}
           </button>
         </DwellTarget>
         <DwellTarget onActivate={onKeepExploring} dwellMs={800}>

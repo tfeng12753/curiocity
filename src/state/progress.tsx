@@ -66,6 +66,12 @@ export const BADGES: Record<string, BadgeDefinition> = {
     description: 'Split the landing strip into fifths and tenths.',
     icon: 'sparkle',
   },
+  'ramp-master': {
+    id: 'ramp-master',
+    name: 'Ramp Master',
+    description: 'Found the ramp height for three different targets.',
+    icon: 'ball',
+  },
 };
 
 export interface ProgressState {

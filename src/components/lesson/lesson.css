@@ -333,6 +333,27 @@
   max-width: 100%;
 }
 
+/* --------------------------------------------------------------- ramp art */
+
+.ramp-canvas {
+  position: relative;
+  width: min(420px, 92vw);
+  max-width: 100%;
+}
+
+.ramp-canvas__surface {
+  display: block;
+  cursor: crosshair;
+}
+
+.ramp-canvas__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 18px 22px rgba(36, 26, 86, 0.22));
+}
+
 .fraction-canvas__surface {
   display: block;
   cursor: crosshair;

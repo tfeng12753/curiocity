@@ -22,6 +22,9 @@ interface LessonShellProps {
   pathLabel: string;
   scenes: LessonScene[];
   onExit: () => void;
+  /** Passed straight to WorkshopBackdrop - defaults to fraction notation, so
+   *  only a non-maths lesson needs to override it. */
+  backdropSymbols?: string[];
 }
 
 /**
@@ -30,7 +33,7 @@ interface LessonShellProps {
  * already-tested FractionLesson.tsx can stay exactly as it is rather than
  * being refactored to use this.
  */
-export function LessonShell({ pathLabel, scenes, onExit }: LessonShellProps) {
+export function LessonShell({ pathLabel, scenes, onExit, backdropSymbols }: LessonShellProps) {
   const [index, setIndex] = useState(0);
   const { mode, status } = useTrackerState();
 
@@ -38,6 +41,11 @@ export function LessonShell({ pathLabel, scenes, onExit }: LessonShellProps) {
   const isChallenge = Boolean(scene.challenge);
   const isComplete = scene.id === 'complete';
   const cameraActive = mode === 'hand' && status === 'ready';
+  // pathLabel is always "<City Name> / <Level name> / Level NN" - the city
+  // name alone is exactly what the back button needs, and every lesson
+  // already builds pathLabel, so this needs no new prop threaded through
+  // every lesson component.
+  const cityName = pathLabel.split(' / ')[0] ?? 'Home';
 
   useEffect(() => {
     return () => tracker.setDwell(0);
@@ -57,7 +65,7 @@ export function LessonShell({ pathLabel, scenes, onExit }: LessonShellProps) {
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
-      <WorkshopBackdrop challenge={isChallenge} />
+      <WorkshopBackdrop challenge={isChallenge} symbols={backdropSymbols} />
       {cameraActive && <CameraStage />}
       {cameraActive && <AirTrail />}
 
@@ -65,7 +73,7 @@ export function LessonShell({ pathLabel, scenes, onExit }: LessonShellProps) {
         <header className="lesson__hud">
           <DwellTarget onActivate={onExit}>
             <button className="city__back" onClick={onExit}>
-              ← Math City
+              ← {cityName}
             </button>
           </DwellTarget>
 

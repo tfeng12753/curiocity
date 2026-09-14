@@ -32,7 +32,8 @@ export type IconName =
   | 'trophy'
   | 'bike'
   | 'car'
-  | 'rocket';
+  | 'rocket'
+  | 'ball';
 
 interface IconProps {
   name: IconName;
@@ -227,6 +228,15 @@ const SHAPES: Record<IconName, React.ReactNode> = {
       <path d="M16.7 11.4 l3.1 3.4 -.5 3.2 -2.9 -2.1 Z" fill={CORAL} stroke={CORAL_EDGE} strokeWidth="1" strokeLinejoin="round" />
       <circle cx="12" cy="9.6" r="2.3" fill={CYAN} stroke={CYAN_EDGE} strokeWidth="1" />
       <path d="M10.4 17.4 q1.6 4.2 3.2 0 Z" fill={SUN} stroke={SUN_EDGE} strokeWidth="0.9" strokeLinejoin="round" />
+    </>
+  ),
+
+  ball: (
+    <>
+      <circle cx="12" cy="12" r="9" fill={CORAL} stroke={CORAL_EDGE} {...EDGE} />
+      <path d="M12 3 v18 M3 12 h18" stroke={CORAL_EDGE} strokeWidth="1" opacity="0.35" />
+      <path d="M5.6 5.6 a9 9 0 0 1 12.8 12.8" fill="none" stroke={CORAL_EDGE} strokeWidth="1" opacity="0.35" />
+      <circle cx="8.6" cy="8.6" r="2" fill="#fff" opacity="0.85" />
     </>
   ),
 };

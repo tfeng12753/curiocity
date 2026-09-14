@@ -12,6 +12,7 @@ import { FractionLesson } from './components/lesson/FractionLesson';
 import { FractionLesson2 } from './components/lesson/FractionLesson2';
 import { FractionLesson3 } from './components/lesson/FractionLesson3';
 import { FractionLesson4 } from './components/lesson/FractionLesson4';
+import { PhysicsLesson1 } from './components/lesson/PhysicsLesson1';
 import { TopNav, type NavPanel } from './components/layout/TopNav';
 import { NavDrawer } from './components/layout/NavDrawer';
 import { TeacherDashboard } from './components/teacher/TeacherDashboard';
@@ -36,6 +37,7 @@ const LESSON_COMPONENTS: Record<string, ComponentType<LessonProps>> = {
   'fractions-2': FractionLesson2,
   'fractions-3': FractionLesson3,
   'alien-1': FractionLesson4,
+  motion: PhysicsLesson1,
 };
 
 type View =
